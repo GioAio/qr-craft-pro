@@ -1,0 +1,1114 @@
+<!DOCTYPE html>
+<html lang="el">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>QR Craft Pro - Dynamic QR Code & Multi-Link Studio</title>
+  <meta name="description" content="100% Δωρεάν εφαρμογή δημιουργίας Dynamic QR Codes & Multi-Link σελίδων για εκδηλώσεις, βαπτίσεις, γάμους και επιχειρήσεις.">
+  
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- QRCode rendering library (browser-tested stable build) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+  <style>
+    :root {
+      --font-heading: 'Outfit', sans-serif;
+      --font-body: 'Inter', sans-serif;
+      --bg-dark: #090d16;
+      --bg-card: rgba(15, 23, 42, 0.85);
+      --border-color: rgba(255, 255, 255, 0.12);
+      --border-hover: rgba(56, 189, 248, 0.5);
+      --accent-primary: #0284c7;
+      --accent-gradient: linear-gradient(135deg, #0284c7 0%, #38bdf8 50%, #818cf8 100%);
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: var(--font-body);
+      background-color: var(--bg-dark);
+      color: var(--text-main);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(2, 132, 199, 0.18) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(129, 140, 248, 0.15) 0%, transparent 40%);
+      background-attachment: fixed;
+      min-height: 100vh;
+      padding-bottom: 2rem;
+    }
+
+    h1, h2, h3, h4, h5 { font-family: var(--font-heading); }
+
+    .glass-panel {
+      background: var(--bg-card);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.4);
+    }
+
+    .glass-card {
+      background: rgba(15, 23, 42, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      transition: transform 0.2s ease, border-color 0.2s ease;
+    }
+
+    .glass-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-hover);
+    }
+
+    .btn-primary {
+      background: var(--accent-gradient);
+      color: #ffffff;
+      border: none;
+      font-family: var(--font-heading);
+      font-weight: 600;
+      padding: 0.65rem 1.3rem;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      box-shadow: 0 4px 14px 0 rgba(2, 132, 199, 0.35);
+      transition: all 0.2s ease;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 6px 20px 0 rgba(2, 132, 199, 0.5);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text-main);
+      border: 1px solid var(--border-color);
+      font-family: var(--font-heading);
+      font-weight: 500;
+      padding: 0.6rem 1.1rem;
+      border-radius: 12px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+      transition: all 0.2s ease;
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+
+    .input-field {
+      width: 100%;
+      background: rgba(15, 23, 42, 0.9);
+      border: 1px solid var(--border-color);
+      border-radius: 10px;
+      padding: 0.7rem 0.9rem;
+      color: var(--text-main);
+      font-family: var(--font-body);
+      font-size: 0.92rem;
+      outline: none;
+    }
+
+    .input-field:focus {
+      border-color: #38bdf8;
+      box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2);
+    }
+
+    /* Smartphone Mockup Container */
+    .phone-mockup-wrapper {
+      width: 310px;
+      height: 600px;
+      background: #000000;
+      border-radius: 38px;
+      padding: 10px;
+      box-shadow: 0 0 0 2px #334155, 0 20px 40px -10px rgba(0, 0, 0, 0.8), 0 0 30px rgba(2, 132, 199, 0.25);
+      position: relative;
+      overflow: hidden;
+      margin: 0 auto;
+    }
+
+    .phone-screen {
+      width: 100%;
+      height: 100%;
+      background: #ffffff;
+      border-radius: 28px;
+      overflow-y: auto;
+      position: relative;
+      color: #1e293b;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .phone-notch {
+      position: absolute;
+      top: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90px;
+      height: 18px;
+      background: #000000;
+      border-radius: 10px;
+      z-index: 50;
+    }
+
+    /* Themes */
+    .theme-emerald {
+      --theme-bg: linear-gradient(180deg, #ecfdf5 0%, #f0fdf4 100%);
+      --theme-header: #047857;
+      --theme-btn-bg: #ffffff;
+      --theme-btn-border: #a7f3d0;
+      --theme-btn-text: #065f46;
+      --theme-badge-bg: #d1fae5;
+      --theme-badge-text: #047857;
+    }
+
+    .theme-luxury {
+      --theme-bg: linear-gradient(180deg, #faf5ff 0%, #f3e8ff 100%);
+      --theme-header: #6b21a8;
+      --theme-btn-bg: #ffffff;
+      --theme-btn-border: #e9d5ff;
+      --theme-btn-text: #581c87;
+      --theme-badge-bg: #f3e8ff;
+      --theme-badge-text: #7e22ce;
+    }
+
+    .theme-sunset {
+      --theme-bg: linear-gradient(180deg, #fff7ed 0%, #ffedd5 100%);
+      --theme-header: #c2410c;
+      --theme-btn-bg: #ffffff;
+      --theme-btn-border: #fed7aa;
+      --theme-btn-text: #9a3412;
+      --theme-badge-bg: #ffedd5;
+      --theme-badge-text: #c2410c;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .animate-fade-in { animation: fadeIn 0.25s ease-out forwards; }
+  </style>
+</head>
+<body>
+  <div id="app"></div>
+
+  <script>
+    // Pure Vanilla JS Engine (Runs 100% natively on file:// without Babel)
+    const STORAGE_KEY = 'qr_craft_pro_codes_v1';
+
+    const INITIAL_DATA = [
+      {
+        id: 'sample-baptism-giorgos',
+        title: 'Η βάπτιση του Γιώργου',
+        type: 'multilink',
+        createdAt: '2026-08-02T10:30:00.000Z',
+        scanCount: 17,
+        design: {
+          fgColor: '#1e293b',
+          bgColor: '#ffffff',
+          useGradient: true,
+          gradientColor: '#0284c7',
+          eyeStyle: 'rounded',
+          logo: 'church',
+          frameText: 'ΔΕΣ ΧΑΡΤΗ & ΠΛΗΡΟΦΟΡΙΕΣ',
+          frameColor: '#0284c7'
+        },
+        content: {
+          title: 'Η βάπτιση του Γιώργου',
+          description: 'Σας περιμένουμε με χαρά στη βάπτιση του μικρού μας Γιώργου! Δείτε παρακάτω την τοποθεσία του μυστηρίου και της δεξίωσης.',
+          headerImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80',
+          theme: 'emerald',
+          links: [
+            {
+              id: 'l1',
+              label: 'Ιερά Μονή Μεταμορφώσεως του Σωτήρος',
+              url: 'https://maps.google.com/?q=Monastery+Metamorfosis',
+              icon: '⛪',
+              highlight: true,
+              badge: 'Μυστήριο 11:30',
+              subtext: 'Πατήστε για οδηγίες πλοήγησης',
+              extraNotes: '* Άνετο δωρεάν parking πίσω από το μοναστήρι'
+            },
+            {
+              id: 'l2',
+              label: 'Εξοχικό Κέντρο Καλύβα',
+              url: 'https://maps.google.com/?q=Exochiko+Kentro+Kalyva',
+              icon: '📍',
+              highlight: false,
+              badge: 'Δεξίωση 13:30',
+              subtext: 'Τοποθεσία δεξίωσης & στάθμευση',
+              extraNotes: '* Διατίθεται παιδότοπος για τα παιδιά'
+            }
+          ]
+        }
+      }
+    ];
+
+    function getStoredData() {
+      try {
+        const d = localStorage.getItem(STORAGE_KEY);
+        if (!d) {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(INITIAL_DATA));
+          return INITIAL_DATA;
+        }
+        return JSON.parse(d);
+      } catch (e) {
+        return INITIAL_DATA;
+      }
+    }
+
+    function saveData(data) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    // State Store
+    let state = {
+      codes: getStoredData(),
+      view: 'dashboard', // 'dashboard' | 'builder'
+      editingItem: null,
+      viewingItem: null
+    };
+
+    function setState(newState) {
+      state = { ...state, ...newState };
+      saveData(state.codes);
+      renderApp();
+    }
+
+    // Draw QR Code onto canvas using qrcodejs library
+    function renderQRCode(canvas, item, size) {
+      if (!canvas) return;
+      size = size || 110;
+      const scale = 4; // Generate at 4x resolution for crispness
+      const renderSize = size * scale;
+      const margin = 16 * scale; // Quiet zone (margin)
+      const qrSize = renderSize - (margin * 2);
+
+      const baseUrl = window.location.protocol === 'file:'
+        ? window.location.href.split('#')[0]
+        : (window.location.origin + window.location.pathname);
+      const textPayload = baseUrl + '#view=' + item.id;
+
+      const fgColor = (item.design && item.design.fgColor) ? item.design.fgColor : '#000000';
+      const bgColor = (item.design && item.design.bgColor) ? item.design.bgColor : '#ffffff';
+
+      let retries = 60;
+      function tryRender() {
+        if (typeof QRCode !== 'undefined') {
+          try {
+            // qrcodejs uses a container div approach
+            // We create a temp div, let qrcodejs render to it, then copy to our canvas
+            const tempDiv = document.createElement('div');
+            tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + qrSize + 'px;height:' + qrSize + 'px;';
+            document.body.appendChild(tempDiv);
+
+            new QRCode(tempDiv, {
+              text: textPayload,
+              width: qrSize,
+              height: qrSize,
+              colorDark: fgColor,
+              colorLight: bgColor,
+              correctLevel: QRCode.CorrectLevel.M
+            });
+
+            // qrcodejs may render async — wait a tick then copy
+            setTimeout(function() {
+              const qrCanvas = tempDiv.querySelector('canvas');
+              const qrImg = tempDiv.querySelector('img');
+              const ctx = canvas.getContext('2d');
+              
+              // Set high internal resolution for crispness
+              canvas.width = renderSize;
+              canvas.height = renderSize;
+
+              // Fill background (margin/quiet zone)
+              ctx.fillStyle = bgColor;
+              ctx.fillRect(0, 0, renderSize, renderSize);
+
+              if (qrCanvas) {
+                ctx.drawImage(qrCanvas, margin, margin, qrSize, qrSize);
+              } else if (qrImg) {
+                const img = new Image();
+                img.onload = function() { ctx.drawImage(img, margin, margin, qrSize, qrSize); };
+                img.src = qrImg.src;
+              } else {
+                // plain text fallback
+                ctx.fillStyle = fgColor;
+                ctx.font = 'bold 24px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText('QR CODE', renderSize / 2, renderSize / 2);
+              }
+
+              document.body.removeChild(tempDiv);
+            }, 100);
+          } catch(e) {
+            console.error('QR render error:', e);
+          }
+        } else if (retries > 0) {
+          retries--;
+          setTimeout(tryRender, 100);
+        } else {
+          // Offline fallback
+          const ctx = canvas.getContext('2d');
+          canvas.width = size;
+          canvas.height = size;
+          ctx.fillStyle = bgColor;
+          ctx.fillRect(0, 0, size, size);
+          ctx.fillStyle = fgColor;
+          ctx.font = 'bold 11px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('QR CODE', size / 2, size / 2);
+        }
+      }
+      tryRender();
+    }
+
+    // Render App Component Tree
+    function renderApp() {
+      const appEl = document.getElementById('app');
+      if (!appEl) return;
+
+      const totalScans = state.codes.reduce((acc, c) => acc + (c.scanCount || 0), 0);
+
+      let contentHTML = '';
+
+      if (state.view === 'dashboard') {
+        contentHTML = `
+          <div style="padding: 0 1.5rem 2rem 1.5rem; max-width: 1400px; margin: 0 auto;">
+            
+            <!-- Statistics Bar -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1.25rem; margin-bottom: 2rem;">
+              <div class="glass-panel" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">ΣΥΝΟΛΙΚΑ QR CODES</span>
+                  <h2 style="font-size: 1.8rem; font-weight: 800; color: #fff; margin-top: 0.2rem;">${state.codes.length}</h2>
+                </div>
+                <div style="font-size: 2rem;">📱</div>
+              </div>
+
+              <div class="glass-panel" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">ΣΥΝΟΛΙΚΕΣ ΣΑΡΩΣΕΙΣ (SCANS)</span>
+                  <h2 style="font-size: 1.8rem; font-weight: 800; color: #38bdf8; margin-top: 0.2rem;">${totalScans}</h2>
+                </div>
+                <div style="font-size: 2rem;">📊</div>
+              </div>
+
+              <div class="glass-panel" style="padding: 1.25rem 1.5rem; display: flex; align-items: center; justify-content: space-between;">
+                <div>
+                  <span style="font-size: 0.78rem; color: var(--text-muted); font-weight: 600;">MULTI-LINK ΣΕΛΙΔΕΣ</span>
+                  <h2 style="font-size: 1.8rem; font-weight: 800; color: #c084fc; margin-top: 0.2rem;">${state.codes.filter(c => c.type === 'multilink').length}</h2>
+                </div>
+                <div style="font-size: 2rem;">✨</div>
+              </div>
+            </div>
+
+            <!-- List Header -->
+            <div class="glass-panel" style="padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff;">Τα QR Codes Μου (${state.codes.length})</h2>
+              <button onclick="openNewBuilder()" class="btn-primary">
+                + Δημιουργία QR Code
+              </button>
+            </div>
+
+            <!-- QR Cards Grid -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(340px, 1fr)); gap: 1.25rem;">
+              ${state.codes.map(item => `
+                <div class="glass-card animate-fade-in" style="padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between; gap: 1rem;">
+                  <div style="display: flex; gap: 1.25rem;">
+                    <div style="background: #ffffff; padding: 0.4rem; border-radius: 12px; align-self: flex-start; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+                      <canvas id="qr-canvas-${item.id}" width="110" height="110" style="width: 110px; height: 110px; display: block;"></canvas>
+                    </div>
+
+                    <div style="flex: 1; min-width: 0;">
+                      <span style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; border-radius: 6px; background: rgba(56, 189, 248, 0.15); color: #38bdf8; text-transform: uppercase;">
+                        ${item.type}
+                      </span>
+                      <h3 style="font-size: 1.1rem; font-weight: 700; color: #fff; margin: 0.35rem 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
+                        ${item.title}
+                      </h3>
+                      <span style="font-size: 0.8rem; color: var(--text-muted);">
+                        Σαρώσεις: <strong style="color: #34d399;">${item.scanCount || 0}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style="border-top: 1px solid var(--border-color); padding-top: 0.75rem; display: flex; align-items: center; justify-content: space-between;">
+                    <button onclick="viewLandingPage('${item.id}')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;">
+                      👁️ Προβολή
+                    </button>
+                    <div style="display: flex; gap: 0.4rem;">
+                      <button onclick="downloadPNG('${item.id}')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;">
+                        📥 Download
+                      </button>
+                      <button onclick="openEditBuilder('${item.id}')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.6rem;">
+                        ✏️
+                      </button>
+                      <button onclick="deleteQRItem('${item.id}')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.6rem; border-color: rgba(239, 68, 68, 0.4);">
+                        🗑️
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          </div>
+        `;
+      } else if (state.view === 'builder') {
+        const item = state.editingItem;
+        const ml = item.content;
+        const d = item.design || {};
+        const tab = state.builderTab || 'content';
+
+        const tabStyle = (t) => `
+          padding: 0.55rem 1.1rem; border-radius: 10px; border: none; cursor: pointer; font-size: 0.85rem; font-weight: 600;
+          background: ${tab === t ? 'var(--accent-gradient)' : 'transparent'};
+          color: ${tab === t ? '#fff' : 'var(--text-muted)'};
+          transition: all 0.18s;
+        `;
+
+        const inp = `background: rgba(15,23,42,0.9); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.7rem 1rem; color: #fff; width: 100%; font-size: 0.85rem;`;
+
+        contentHTML = `
+          <div style="max-width: 1350px; margin: 0 auto; padding: 0 1.5rem 3rem 1.5rem;">
+            
+            <!-- Top Header -->
+            <div class="glass-panel" style="padding: 1rem 1.5rem; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+              <button onclick="cancelBuilder()" class="btn-secondary">← Πίσω</button>
+              <h2 style="font-size: 1.1rem; font-weight: 700; color: #fff;">✏️ Επεξεργασία QR Code</h2>
+              <button onclick="saveCurrentBuilder()" class="btn-primary">💾 Αποθήκευση</button>
+            </div>
+
+            <!-- TABS -->
+            <div class="glass-panel" style="padding: 0.5rem; margin-bottom: 1.25rem; display: flex; gap: 0.25rem;">
+              <button style="${tabStyle('content')}" onclick="setBuilderTab('content')">📝 Περιεχόμενο</button>
+              <button style="${tabStyle('design')}" onclick="setBuilderTab('design')">🎨 Σχεδιασμός</button>
+              <button style="${tabStyle('qr')}" onclick="setBuilderTab('qr')">⬛ QR Code</button>
+            </div>
+
+            <!-- Two Column Layout -->
+            <div style="display: grid; grid-template-columns: minmax(0,1fr) 320px; gap: 1.5rem; align-items: start;">
+              
+              <!-- LEFT: Tab Content -->
+              <div class="glass-panel" style="padding: 1.5rem; display: flex; flex-direction: column; gap: 1.1rem;">
+
+                ${tab === 'content' ? `
+                  <!-- === TAB 1: CONTENT === -->
+                  <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Τίτλος Σελίδας *</label>
+                    <input type="text" id="input-title" value="${item.title || ''}" oninput="updateBuilderTitle(this.value)" style="${inp}" placeholder="π.χ. Η βάπτιση του Γιώργου" />
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Περιγραφή Υποδοχής</label>
+                    <textarea id="input-desc" rows="2" oninput="updateBuilderDesc(this.value)" style="${inp}">${ml.description || ''}</textarea>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.5rem;">Εικόνα Κεφαλίδας (Cover)</label>
+                    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.5rem;">
+                      <label class="btn-secondary" style="font-size:0.8rem;cursor:pointer;padding:0.45rem 0.85rem;">
+                        📁 Επιλογή από υπολογιστή
+                        <input type="file" accept="image/*" onchange="handleCoverFileUpload(this)" style="display:none;" />
+                      </label>
+                      ${ml.headerImage ? `<button onclick="removeCoverImage()" class="btn-secondary" style="font-size:0.78rem;padding:0.45rem 0.65rem;border-color:rgba(239,68,68,0.4);color:#ef4444;">🗑️ Αφαίρεση</button>` : ''}
+                    </div>
+                    <input type="text" id="input-cover" value="${ml.headerImage || ''}" oninput="updateBuilderCover(this.value)" placeholder="Ή επικολλήστε URL εικόνας..." style="${inp}" />
+                    ${ml.headerImage ? `<img src="${ml.headerImage}" style="width:100%;max-height:100px;object-fit:cover;border-radius:8px;margin-top:0.5rem;" onerror="this.style.display='none'" />` : ''}
+                  </div>
+
+                  <!-- Links Manager -->
+                  <div style="border-top:1px solid var(--border-color);padding-top:1.1rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.85rem;">
+                      <h4 style="font-size:0.95rem;font-weight:700;color:#fff;">🔗 Σύνδεσμοι & Κουμπιά (${ml.links?.length || 0})</h4>
+                      <button onclick="addBuilderLink()" class="btn-primary" style="padding:0.4rem 0.8rem;font-size:0.8rem;">+ Προσθήκη</button>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:0.75rem;">
+                      ${(ml.links || []).map((link, idx) => `
+                        <div style="background:rgba(15,23,42,0.8);border:1px solid var(--border-color);border-radius:12px;padding:0.85rem;display:flex;flex-direction:column;gap:0.5rem;">
+                          <div style="display:flex;justify-content:space-between;align-items:center;">
+                            <span style="font-size:0.75rem;font-weight:700;color:#38bdf8;">#${idx+1} Κουμπί</span>
+                            <button onclick="removeBuilderLink(${idx})" class="btn-secondary" style="padding:0.2rem 0.5rem;font-size:0.72rem;border-color:rgba(239,68,68,0.4);color:#ef4444;">Διαγραφή</button>
+                          </div>
+                          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                            <input type="text" placeholder="Όνομα κουμπιού..." value="${link.label||''}" oninput="updateLinkField(${idx},'label',this.value)" style="${inp}font-size:0.82rem;" />
+                            <input type="text" placeholder="URL (https://...)" value="${link.url||''}" oninput="updateLinkField(${idx},'url',this.value)" style="${inp}font-size:0.82rem;" />
+                          </div>
+                          <div style="display:grid;grid-template-columns:1fr 1fr;gap:0.5rem;">
+                            <input type="text" placeholder="Υπότιτλος..." value="${link.subtext||''}" oninput="updateLinkField(${idx},'subtext',this.value)" style="${inp}font-size:0.8rem;" />
+                            <input type="text" placeholder="* Σημειώσεις (Parking κτλ.)" value="${link.extraNotes||''}" oninput="updateLinkField(${idx},'extraNotes',this.value)" style="${inp}font-size:0.8rem;color:#38bdf8;" />
+                          </div>
+                          <div style="display:grid;grid-template-columns:1fr auto;gap:0.5rem;align-items:center;">
+                            <input type="text" placeholder="Badge/Ώρα (π.χ. 11:30)" value="${link.badge||''}" oninput="updateLinkField(${idx},'badge',this.value)" style="${inp}font-size:0.8rem;" />
+                            <label style="font-size:0.78rem;display:flex;align-items:center;gap:0.3rem;cursor:pointer;white-space:nowrap;color:var(--text-muted);">
+                              <input type="checkbox" ${link.highlight?'checked':''} onchange="updateLinkField(${idx},'highlight',this.checked)" />
+                              Έμφαση
+                            </label>
+                          </div>
+                        </div>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                ` : tab === 'design' ? `
+                  <!-- === TAB 2: DESIGN === -->
+                  <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.6rem;">🎨 Παλέτα Χρωμάτων Σελίδας</label>
+                    <div style="display:grid;grid-template-columns:repeat(8,1fr);gap:0.4rem;margin-bottom:0.75rem;">
+                      ${[
+                        {hex:'#047857',name:'Πράσινο'},
+                        {hex:'#0284c7',name:'Γαλάζιο'},
+                        {hex:'#7e22ce',name:'Μοβ'},
+                        {hex:'#db2777',name:'Ροζ'},
+                        {hex:'#ea580c',name:'Πορτοκαλί'},
+                        {hex:'#dc2626',name:'Κόκκινο'},
+                        {hex:'#ca8a04',name:'Χρυσό'},
+                        {hex:'#0f766e',name:'Τιρκουάζ'},
+                        {hex:'#15803d',name:'Σκ.Πράσινο'},
+                        {hex:'#1d4ed8',name:'Μπλε'},
+                        {hex:'#9333ea',name:'Βιολετί'},
+                        {hex:'#e11d48',name:'Σκ.Ροζ'},
+                        {hex:'#c2410c',name:'Καφέ-Πορτ.'},
+                        {hex:'#b91c1c',name:'Σκ.Κόκκινο'},
+                        {hex:'#a16207',name:'Σκ.Χρυσό'},
+                        {hex:'#0e7490',name:'Πετρόλ'},
+                        {hex:'#166534',name:'Δαση'},
+                        {hex:'#1e40af',name:'Ναυτ.Μπλε'},
+                        {hex:'#6d28d9',name:'Ίνδιγκο'},
+                        {hex:'#be185d',name:'Κερασί'},
+                        {hex:'#9a3412',name:'Σκ.Καφέ'},
+                        {hex:'#7f1d1d',name:'Μπορντό'},
+                        {hex:'#1e293b',name:'Σκούρο'},
+                        {hex:'#475569',name:'Γκρι Στ.'},
+                      ].map(({hex,name}) => {
+                        const isActive = (d.buttonColor || '#047857') === hex;
+                        return '<button onclick="applyPaletteColor(\'' + hex + '\')" title="' + name + '" style="width:100%;aspect-ratio:1;border-radius:8px;border:3px solid ' + (isActive ? '#fff' : 'transparent') + ';background:' + hex + ';cursor:pointer;box-shadow:' + (isActive ? '0 0 0 2px #38bdf8' : '0 2px 4px rgba(0,0,0,0.3)') + ';transition:all 0.15s;"></button>';
+                      }).join('')}
+                    </div>
+                    <div style="display:flex;align-items:center;gap:0.6rem;padding:0.5rem 0.75rem;background:rgba(15,23,42,0.6);border-radius:10px;border:1px solid var(--border-color);">
+                      <div style="width:28px;height:28px;border-radius:6px;background:${d.buttonColor||'#047857'};flex-shrink:0;border:2px solid rgba(255,255,255,0.2);"></div>
+                      <span style="font-size:0.8rem;color:var(--text-muted);">Επιλεγμένο χρώμα:</span>
+                      <strong style="font-size:0.85rem;color:#fff;font-family:monospace;">${d.buttonColor||'#047857'}</strong>
+                      <span style="margin-left:auto;font-size:0.72rem;color:var(--text-muted);">Ή επέλεξε custom →</span>
+                      <input type="color" value="${d.buttonColor||'#047857'}" onchange="applyPaletteColor(this.value)" 
+                        style="width:32px;height:32px;border:none;border-radius:6px;cursor:pointer;background:transparent;padding:0;" />
+                    </div>
+                  </div>
+
+
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                      <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Γραμματοσειρά</label>
+                      <select onchange="updateBuilderFont(this.value)" style="${inp}cursor:pointer;">
+                        <option value="Inter" ${(d.fontFamily||'Inter')==='Inter'?'selected':''}>Inter (Σύγχρονη)</option>
+                        <option value="Outfit" ${d.fontFamily==='Outfit'?'selected':''}>Outfit (Φρέσκια)</option>
+                        <option value="Georgia" ${d.fontFamily==='Georgia'?'selected':''}>Georgia (Κλασική)</option>
+                        <option value="Playfair Display" ${d.fontFamily==='Playfair Display'?'selected':''}>Playfair (Κομψή)</option>
+                        <option value="Roboto" ${d.fontFamily==='Roboto'?'selected':''}>Roboto (Απλή)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Στυλ Κεφαλίδας</label>
+                      <select onchange="updateBuilderHeaderStyle(this.value)" style="${inp}cursor:pointer;">
+                        <option value="gradient" ${(d.headerStyle||'gradient')==='gradient'?'selected':''}>Gradient Banner</option>
+                        <option value="image-overlay" ${d.headerStyle==='image-overlay'?'selected':''}>Εικόνα + Overlay</option>
+                        <option value="minimal" ${d.headerStyle==='minimal'?'selected':''}>Minimal (Χωρίς banner)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:1rem;">
+                    <div>
+                      <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Χρώμα Τίτλου</label>
+                      <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="color" value="${d.titleColor||'#0f172a'}" onchange="updateDesignField('titleColor',this.value)" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;background:transparent;flex-shrink:0;" />
+                      </div>
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Χρώμα Κουμπιών</label>
+                      <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="color" value="${d.buttonColor||'#0284c7'}" onchange="updateDesignField('buttonColor',this.value)" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;background:transparent;flex-shrink:0;" />
+                      </div>
+                    </div>
+                    <div>
+                      <label style="font-size:0.75rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Φόντο Σελίδας</label>
+                      <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="color" value="${d.pageBgColor||'#ffffff'}" onchange="updateDesignField('pageBgColor',this.value)" style="width:36px;height:36px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;background:transparent;flex-shrink:0;" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                      <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Μέγεθος Τίτλου</label>
+                      <select onchange="updateDesignField('titleSize',this.value)" style="${inp}cursor:pointer;">
+                        <option value="sm" ${d.titleSize==='sm'?'selected':''}>Μικρό</option>
+                        <option value="md" ${(!d.titleSize||d.titleSize==='md')?'selected':''}>Μεσαίο</option>
+                        <option value="lg" ${d.titleSize==='lg'?'selected':''}>Μεγάλο</option>
+                        <option value="xl" ${d.titleSize==='xl'?'selected':''}>Πολύ Μεγάλο</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Στρογγυλότητα Κουμπιών</label>
+                      <select onchange="updateDesignField('btnRadius',this.value)" style="${inp}cursor:pointer;">
+                        <option value="4px" ${d.btnRadius==='4px'?'selected':''}>Τετράγωνα</option>
+                        <option value="10px" ${(!d.btnRadius||d.btnRadius==='10px')?'selected':''}>Στρογγυλά</option>
+                        <option value="24px" ${d.btnRadius==='24px'?'selected':''}>Pill (Κυκλικά)</option>
+                      </select>
+                    </div>
+                  </div>
+
+                ` : `
+                  <!-- === TAB 3: QR === -->
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                      <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Χρώμα QR (Modules)</label>
+                      <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="color" value="${d.fgColor||'#1e293b'}" onchange="updateBuilderQRColor(this.value)" style="width:42px;height:42px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;background:transparent;flex-shrink:0;" />
+                        <span style="font-size:0.8rem;color:var(--text-muted);">${d.fgColor||'#1e293b'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Φόντο QR</label>
+                      <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="color" value="${d.bgColor||'#ffffff'}" onchange="updateDesignField('bgColor',this.value)" style="width:42px;height:42px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;background:transparent;flex-shrink:0;" />
+                        <span style="font-size:0.8rem;color:var(--text-muted);">${d.bgColor||'#ffffff'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.6rem;">Στυλ "Ματιών" (Γωνιές)</label>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;">
+                      ${['square','rounded','circle','leaf'].map(s=>`
+                        <button onclick="updateDesignField('eyeStyle','${s}')" style="padding:0.65rem 0.3rem;border-radius:8px;border:2px solid ${(d.eyeStyle||'square')===s?'#38bdf8':'var(--border-color)'};background:${(d.eyeStyle||'square')===s?'rgba(56,189,248,0.15)':'rgba(15,23,42,0.8)'};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.2rem;">
+                          <span style="font-size:1rem;">${s==='square'?'⬛':s==='rounded'?'🔲':s==='circle'?'⚫':'🍃'}</span>
+                          <span style="font-size:0.65rem;color:var(--text-muted);text-transform:capitalize;">${s==='square'?'Τετράγωνα':s==='rounded'?'Στρογγυλά':s==='circle'?'Κυκλικά':'Φύλλο'}</span>
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Χρώμα Ματιών</label>
+                    <div style="display:flex;align-items:center;gap:0.5rem;">
+                      <input type="color" value="${d.eyeColor||'#0284c7'}" onchange="updateDesignField('eyeColor',this.value)" style="width:42px;height:42px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;background:transparent;flex-shrink:0;" />
+                      <span style="font-size:0.8rem;color:var(--text-muted);">${d.eyeColor||'#0284c7'}</span>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.6rem;">Λογότυπο Κέντρου</label>
+                    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:0.5rem;">
+                      ${[{k:'none',l:'Κανένα',e:'✕'},{k:'church',l:'Εκκλησία',e:'⛪'},{k:'heart',l:'Καρδιά',e:'❤️'},{k:'ring',l:'Βέρα',e:'💍'},{k:'star',l:'Αστέρι',e:'⭐'},{k:'map',l:'Χάρτης',e:'📍'},{k:'phone',l:'Τηλέφωνο',e:'📞'},{k:'instagram',l:'Camera',e:'📷'}].map(({k,l,e})=>`
+                        <button onclick="updateDesignField('logo','${k}')" style="padding:0.6rem 0.3rem;border-radius:8px;border:2px solid ${(d.logo||'church')===k?'#38bdf8':'var(--border-color)'};background:${(d.logo||'church')===k?'rgba(56,189,248,0.15)':'rgba(15,23,42,0.8)'};cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0.2rem;">
+                          <span style="font-size:1.1rem;">${e}</span>
+                          <span style="font-size:0.6rem;color:var(--text-muted);">${l}</span>
+                        </button>
+                      `).join('')}
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Κείμενο Frame (Κάτω Λωρίδα)</label>
+                    <input type="text" value="${d.frameText||''}" oninput="updateDesignField('frameText',this.value)" placeholder="π.χ. ΔΕΣ ΧΑΡΤΗ & ΠΛΗΡΟΦΟΡΙΕΣ" style="${inp}" />
+                  </div>
+
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem;">
+                    <div>
+                      <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Χρώμα Frame</label>
+                      <div style="display:flex;align-items:center;gap:0.5rem;">
+                        <input type="color" value="${d.frameColor||'#0284c7'}" onchange="updateDesignField('frameColor',this.value)" style="width:42px;height:42px;border-radius:8px;border:1px solid var(--border-color);cursor:pointer;background:transparent;flex-shrink:0;" />
+                        <span style="font-size:0.8rem;color:var(--text-muted);">${d.frameColor||'#0284c7'}</span>
+                      </div>
+                    </div>
+                    <div>
+                      <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.4rem;">Επίπεδο Ανάκτησης</label>
+                      <select onchange="updateDesignField('correctLevel',this.value)" style="${inp}cursor:pointer;">
+                        <option value="L" ${d.correctLevel==='L'?'selected':''}>L — Χαμηλό</option>
+                        <option value="M" ${(!d.correctLevel||d.correctLevel==='M')?'selected':''}>M — Μεσαίο ✓</option>
+                        <option value="Q" ${d.correctLevel==='Q'?'selected':''}>Q — Υψηλό</option>
+                        <option value="H" ${d.correctLevel==='H'?'selected':''}>H — Πολύ Υψηλό</option>
+                      </select>
+                    </div>
+                  </div>
+                `}
+
+              </div>
+
+              <!-- RIGHT: Phone Preview -->
+              <div style="position: sticky; top: 1.5rem;">
+                <div id="phone-preview-area" class="glass-panel" style="padding: 1.25rem;">
+                  ${renderPhoneMockupHTML(item)}
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+
+      }
+
+      // App Frame HTML
+      appEl.innerHTML = `
+        <!-- Header Bar -->
+        <header class="glass-panel" style="margin: 1rem; padding: 1rem 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+          <div style="display: flex; align-items: center; gap: 0.75rem;">
+            <div style="background: var(--accent-gradient); padding: 0.6rem; border-radius: 12px; font-size: 1.5rem; display: flex; align-items: center; justify-content: center;">
+              📱
+            </div>
+            <div>
+              <div style="display: flex; align-items: center; gap: 0.5rem;">
+                <h1 style="font-size: 1.4rem; font-weight: 800; color: #fff;">QR Craft Pro</h1>
+                <span style="font-size: 0.75rem; font-weight: 600; background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); padding: 0.15rem 0.5rem; border-radius: 20px;">
+                  100% FREE
+                </span>
+              </div>
+              <p style="font-size: 0.82rem; color: var(--text-muted);">Δημιουργία & Διαχείριση Dynamic QR Codes & Multi-Link Pages χωρίς συνδρομές</p>
+            </div>
+          </div>
+
+          <div style="display: flex; gap: 0.75rem;">
+            <button onclick="openNewBuilder()" class="btn-primary">
+              + Νέο QR Code
+            </button>
+          </div>
+        </header>
+
+        <!-- Main Body Content -->
+        <main>${contentHTML}</main>
+
+        <!-- Modal for Landing Page Preview -->
+        ${state.viewingItem ? `
+          <div style="position: fixed; inset: 0; background: rgba(0,0,0,0.85); backdrop-filter: blur(10px); z-index: 9999; display: flex; align-items: center; justify-content: center; padding: 1rem;">
+            <div class="glass-panel animate-fade-in" style="width: 100%; max-width: 420px; padding: 1.5rem; position: relative;">
+              <button onclick="closeModal()" style="position: absolute; top: 12px; right: 12px; background: rgba(255,255,255,0.1); border: none; color: #fff; width: 32px; height: 32px; border-radius: 50%; cursor: pointer;">✕</button>
+              ${renderPhoneMockupHTML(state.viewingItem)}
+            </div>
+          </div>
+        ` : ''}
+      `;
+
+      // Render Canvases after DOM inject
+      if (state.view === 'dashboard') {
+        state.codes.forEach(item => {
+          const cvs = document.getElementById('qr-canvas-' + item.id);
+          if (cvs) renderQRCode(cvs, item, 100);
+        });
+      }
+    }
+
+    // Phone Mockup HTML Generator — uses item.design for real-time colour/font preview
+    function renderPhoneMockupHTML(item) {
+      const isMulti = item.type === 'multilink';
+      const c = isMulti ? item.content : null;
+      const d = item.design || {};
+
+      // Resolve design values (custom overrides theme defaults)
+      const titleSizeMap = { sm: '0.95rem', md: '1.1rem', lg: '1.35rem', xl: '1.6rem' };
+      const titleFontSize = titleSizeMap[d.titleSize] || '1.15rem';
+      const font = d.fontFamily ? `'${d.fontFamily}', sans-serif` : 'inherit';
+      const titleColor = d.titleColor || (c && c.theme === 'luxury' ? '#6b21a8' : c && c.theme === 'sunset' ? '#c2410c' : '#047857');
+      const btnColor   = d.buttonColor || (c && c.theme === 'luxury' ? '#7e22ce' : c && c.theme === 'sunset' ? '#ea580c' : '#047857');
+      const btnRadius  = d.btnRadius || '12px';
+      const defaultBg  = c && c.theme === 'luxury' ? 'linear-gradient(180deg,#faf5ff 0%,#f3e8ff 100%)'
+                       : c && c.theme === 'sunset' ? 'linear-gradient(180deg,#fff7ed 0%,#ffedd5 100%)'
+                       : 'linear-gradient(180deg,#ecfdf5 0%,#f0fdf4 100%)';
+      const screenBg   = d.pageBgColor || defaultBg;
+
+      // Header: if custom image exists use it, else use header style
+      const headerStyle = d.headerStyle || 'gradient';
+      let headerHTML = '';
+      if (c && c.headerImage) {
+        headerHTML = `<img src="${c.headerImage}" alt="Header" style="width:100%;height:140px;object-fit:cover;display:block;" onerror="this.style.display='none'" />`;
+      } else if (headerStyle === 'minimal') {
+        headerHTML = `<div style="height:16px;"></div>`;
+      } else {
+        // gradient banner
+        const bannerGrad = c && c.theme === 'luxury' ? 'linear-gradient(135deg,#7e22ce,#a855f7)'
+                         : c && c.theme === 'sunset' ? 'linear-gradient(135deg,#ea580c,#fb923c)'
+                         : 'linear-gradient(135deg,#047857,#34d399)';
+        headerHTML = `<div style="height:80px;background:${bannerGrad};display:flex;align-items:center;justify-content:center;">
+          <span style="font-size:2rem;">✨</span>
+        </div>`;
+      }
+
+      return `
+        <div style="text-align: center;">
+          <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em;">
+            ZΩΝΤΑΝΗ ΠΡΟΕΠΙΣΚΟΠΗΣΗ ΚΙΝΗΤΟΥ
+          </span>
+          <div class="phone-mockup-wrapper" style="margin-top: 0.5rem;">
+            <div class="phone-notch"></div>
+            <div class="phone-screen" style="background:${screenBg};font-family:${font};">
+              ${isMulti && c ? `
+                <div>
+                  ${headerHTML}
+
+                  <div style="padding: 0.85rem 0.75rem; text-align: center;">
+                    <h3 style="font-size:${titleFontSize}; font-weight: 800; color: ${titleColor}; margin:0;">
+                      ${c.title || 'Τίτλος'}
+                    </h3>
+                    ${c.description ? `
+                      <p style="font-size: 0.75rem; color: #475569; margin-top: 0.35rem; line-height:1.4;">
+                        ${c.description}
+                      </p>
+                    ` : ''}
+                  </div>
+
+                  <div style="padding: 0 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                    ${c.links && c.links.length > 0 ? c.links.map(link => `
+                      <div style="
+                        background: ${link.highlight ? btnColor : '#ffffff'};
+                        color: ${link.highlight ? '#ffffff' : '#1e293b'};
+                        border: ${link.highlight ? 'none' : '1.5px solid #e2e8f0'};
+                        border-radius: ${btnRadius};
+                        padding: 0.65rem 0.85rem;
+                        display: flex;
+                        align-items: center;
+                        justify-content: space-between;
+                        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+                        font-family: ${font};
+                      ">
+                        <div style="text-align: left;">
+                          <strong style="font-size: 0.8rem; display: block;">${link.label || 'Σύνδεσμος'}</strong>
+                          ${link.subtext ? `<span style="font-size: 0.67rem; opacity: 0.8; display: block;">${link.subtext}</span>` : ''}
+                          ${link.extraNotes ? `<span style="font-size: 0.63rem; font-weight: 600; opacity: 0.85; margin-top: 0.15rem; display: block;">${link.extraNotes.startsWith('*') ? link.extraNotes : '* ' + link.extraNotes}</span>` : ''}
+                        </div>
+                        ${link.badge ? `
+                          <span style="font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 6px; white-space:nowrap; margin-left:0.4rem;
+                            background: ${link.highlight ? 'rgba(255,255,255,0.25)' : btnColor + '22'};
+                            color: ${link.highlight ? '#fff' : btnColor};">
+                            ${link.badge}
+                          </span>
+                        ` : ''}
+                      </div>
+                    `).join('') : `
+                      <div style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 2rem 0;">
+                        Δεν έχουν προστεθεί σύνδεσμοι.
+                      </div>
+                    `}
+                  </div>
+                </div>
+              ` : `
+                <div style="padding: 2rem 1rem; text-align: center;">
+                  <h3 style="font-size: 1.1rem; color: ${titleColor}; font-family:${font};">${item.title}</h3>
+                  <p style="font-size: 0.8rem; color: #64748b;">${item.type.toUpperCase()} QR CODE</p>
+                </div>
+              `}
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+
+    // Smooth preview update function without re-rendering form inputs
+    function updatePhonePreviewOnly() {
+      const container = document.getElementById('phone-preview-area');
+      if (container && state.editingItem) {
+        container.innerHTML = renderPhoneMockupHTML(state.editingItem);
+      }
+    }
+
+    // Handlers
+    window.openNewBuilder = function() {
+      const newItem = {
+        id: 'qr-' + Date.now(),
+        title: 'Η βάπτιση του Γιώργου',
+        type: 'multilink',
+        createdAt: new Date().toISOString(),
+        scanCount: 0,
+        design: { fgColor: '#1e293b', bgColor: '#ffffff' },
+        content: {
+          title: 'Η βάπτιση του Γιώργου',
+          description: 'Σας περιμένουμε με χαρά στη βάπτιση!',
+          headerImage: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=80',
+          theme: 'emerald',
+          links: [
+            { id: 'l1', label: 'Ιερά Μονή Μεταμορφώσεως του Σωτήρος', url: 'https://maps.google.com', highlight: true, badge: '11:30' },
+            { id: 'l2', label: 'Εξοχικό Κέντρο Καλύβα', url: 'https://maps.google.com', highlight: false, badge: '13:30' }
+          ]
+        }
+      };
+      setState({ view: 'builder', editingItem: newItem });
+    };
+
+    window.openEditBuilder = function(id) {
+      const found = state.codes.find(c => c.id === id);
+      if (found) {
+        setState({ view: 'builder', editingItem: JSON.parse(JSON.stringify(found)) });
+      }
+    };
+
+    window.cancelBuilder = function() {
+      setState({ view: 'dashboard', editingItem: null });
+    };
+
+    window.saveCurrentBuilder = function() {
+      const item = state.editingItem;
+      const idx = state.codes.findIndex(c => c.id === item.id);
+      let updatedCodes;
+      if (idx >= 0) {
+        updatedCodes = [...state.codes];
+        updatedCodes[idx] = item;
+      } else {
+        updatedCodes = [item, ...state.codes];
+      }
+      setState({ codes: updatedCodes, view: 'dashboard', editingItem: null });
+    };
+
+    window.deleteQRItem = function(id) {
+      if (confirm('Διαγραφή αυτού του QR Code;')) {
+        setState({ codes: state.codes.filter(c => c.id !== id) });
+      }
+    };
+
+    window.viewLandingPage = function(id) {
+      const found = state.codes.find(c => c.id === id);
+      if (found) {
+        found.scanCount = (found.scanCount || 0) + 1;
+        setState({ viewingItem: found });
+      }
+    };
+
+    window.closeModal = function() {
+      setState({ viewingItem: null });
+    };
+
+    window.downloadPNG = function(id) {
+      const cvs = document.getElementById('qr-canvas-' + id);
+      if (cvs) {
+        const link = document.createElement('a');
+        link.download = `qr-code-${id}.png`;
+        link.href = cvs.toDataURL('image/png');
+        link.click();
+      }
+    };
+
+    // Builder Inputs Handlers (Smooth updates without focus loss)
+    window.updateBuilderTitle = function(val) {
+      state.editingItem.title = val;
+      state.editingItem.content.title = val;
+      updatePhonePreviewOnly();
+    };
+
+    window.updateBuilderDesc = function(val) {
+      state.editingItem.content.description = val;
+      updatePhonePreviewOnly();
+    };
+
+    window.updateBuilderCover = function(val) {
+      state.editingItem.content.headerImage = val;
+      updatePhonePreviewOnly();
+    };
+
+    window.handleCoverFileUpload = function(inputEl) {
+      const file = inputEl.files && inputEl.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const base64Data = e.target.result;
+        state.editingItem.content.headerImage = base64Data;
+        const urlInput = document.getElementById('input-cover');
+        if (urlInput) urlInput.value = base64Data;
+        updatePhonePreviewOnly();
+      };
+      reader.readAsDataURL(file);
+    };
+
+    window.removeCoverImage = function() {
+      state.editingItem.content.headerImage = '';
+      const urlInput = document.getElementById('input-cover');
+      if (urlInput) urlInput.value = '';
+      updatePhonePreviewOnly();
+    };
+
+    window.updateBuilderTheme = function(val) {
+      state.editingItem.content.theme = val;
+      updatePhonePreviewOnly();
+    };
+
+    window.updateBuilderQRColor = function(val) {
+      if (!state.editingItem.design) state.editingItem.design = {};
+      state.editingItem.design.fgColor = val;
+      updatePhonePreviewOnly();
+    };
+
+    window.addBuilderLink = function() {
+      const newL = { id: 'l-' + Date.now(), label: 'Νέος Σύνδεσμος', url: 'https://', highlight: false };
+      if (!state.editingItem.content.links) state.editingItem.content.links = [];
+      state.editingItem.content.links.push(newL);
+      renderApp();
+    };
+
+    window.removeBuilderLink = function(idx) {
+      state.editingItem.content.links.splice(idx, 1);
+      renderApp();
+    };
+
+    window.updateLinkField = function(idx, field, val) {
+      state.editingItem.content.links[idx][field] = val;
+      updatePhonePreviewOnly();
+    };
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', () => {
+      renderApp();
+    });
+
+    // ── New Tab & Design Handlers ──────────────────────────────
+
+    // Switch builder tab (re-renders only left panel)
+    window.setBuilderTab = function(tab) {
+      state.builderTab = tab;
+      renderApp();
+    };
+
+    // Generic design field updater — updates item.design and refreshes preview
+    window.updateDesignField = function(field, val) {
+      if (!state.editingItem.design) state.editingItem.design = {};
+      state.editingItem.design[field] = val;
+      // For fields that change QR appearance, trigger full re-render to update tab UI
+      const tabRedrawFields = ['eyeStyle', 'logo', 'bgColor', 'titleColor', 'buttonColor', 'eyeColor', 'frameColor', 'correctLevel', 'titleSize', 'btnRadius', 'headerStyle', 'fontFamily'];
+      if (tabRedrawFields.includes(field)) {
+        renderApp();
+      } else {
+        updatePhonePreviewOnly();
+      }
+    };
+
+    // Font family updater
+    window.updateBuilderFont = function(val) {
+      if (!state.editingItem.design) state.editingItem.design = {};
+      state.editingItem.design.fontFamily = val;
+      updatePhonePreviewOnly();
+    };
+
+    // Header style updater
+    window.updateBuilderHeaderStyle = function(val) {
+      if (!state.editingItem.design) state.editingItem.design = {};
+      state.editingItem.design.headerStyle = val;
+      updatePhonePreviewOnly();
+    };
+
+    // Palette color — applies to both button colour AND title colour simultaneously
+    window.applyPaletteColor = function(hex) {
+      if (!state.editingItem.design) state.editingItem.design = {};
+      state.editingItem.design.buttonColor = hex;
+      state.editingItem.design.titleColor  = hex;
+      renderApp(); // full re-render so the palette swatch gets highlighted
+    };
+
+  </script>
+</body>
+</html>
