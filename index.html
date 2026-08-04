@@ -501,10 +501,21 @@
                     <button onclick="viewLandingPage('${item.id}')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;">
                       👁️ Προβολή
                     </button>
-                    <div style="display: flex; gap: 0.4rem;">
-                      <button onclick="downloadPNG('${item.id}')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem;">
-                        📥 Download
-                      </button>
+                    <div style="display: flex; gap: 0.4rem; align-items: center;">
+                      <div style="position:relative;" id="dl-wrap-${item.id}">
+                        <button onclick="toggleDownloadMenu('${item.id}')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.75rem; display:flex; align-items:center; gap:0.3rem;">
+                          📥 Download <span style="font-size:0.65rem;">▾</span>
+                        </button>
+                        <div id="dl-menu-${item.id}" style="display:none; position:absolute; bottom:110%; right:0; background:#0f172a; border:1px solid var(--border-color); border-radius:12px; padding:0.4rem; min-width:200px; z-index:999; box-shadow:0 8px 24px rgba(0,0,0,0.6);">
+                          <div style="font-size:0.65rem; color:var(--text-muted); font-weight:700; padding:0.3rem 0.6rem 0.2rem; letter-spacing:0.05em;">ΕΠΙΛΕΞΕ ΜΕΓΕΘΟΣ</div>
+                          <button onclick="downloadPNG('${item.id}', 2.0); toggleDownloadMenu('${item.id}')" style="width:100%;text-align:left;background:transparent;border:none;color:#e2e8f0;font-size:0.8rem;padding:0.45rem 0.6rem;border-radius:8px;cursor:pointer;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">🖨️ 2 × 2 cm (print)</button>
+                          <button onclick="downloadPNG('${item.id}', 2.5); toggleDownloadMenu('${item.id}')" style="width:100%;text-align:left;background:transparent;border:none;color:#e2e8f0;font-size:0.8rem;padding:0.45rem 0.6rem;border-radius:8px;cursor:pointer;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">🖨️ 2.5 × 2.5 cm (print)</button>
+                          <button onclick="downloadPNG('${item.id}', 4.0); toggleDownloadMenu('${item.id}')" style="width:100%;text-align:left;background:transparent;border:none;color:#e2e8f0;font-size:0.8rem;padding:0.45rem 0.6rem;border-radius:8px;cursor:pointer;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">🖨️ 4 × 4 cm (print)</button>
+                          <button onclick="downloadPNG('${item.id}', 6.0); toggleDownloadMenu('${item.id}')" style="width:100%;text-align:left;background:transparent;border:none;color:#e2e8f0;font-size:0.8rem;padding:0.45rem 0.6rem;border-radius:8px;cursor:pointer;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">🖨️ 6 × 6 cm (print)</button>
+                          <div style="height:1px;background:var(--border-color);margin:0.3rem 0.6rem;"></div>
+                          <button onclick="downloadPNG('${item.id}', 0); toggleDownloadMenu('${item.id}')" style="width:100%;text-align:left;background:transparent;border:none;color:#38bdf8;font-size:0.8rem;padding:0.45rem 0.6rem;border-radius:8px;cursor:pointer;" onmouseover="this.style.background='rgba(56,189,248,0.12)'" onmouseout="this.style.background='transparent'">💻 1000×1000 px (digital)</button>
+                        </div>
+                      </div>
                       <button onclick="openEditBuilder('${item.id}')" class="btn-secondary" style="font-size: 0.8rem; padding: 0.45rem 0.6rem;">
                         ✏️
                       </button>
@@ -513,6 +524,7 @@
                       </button>
                     </div>
                   </div>
+
                 </div>
               `).join('')}
             </div>
@@ -1049,14 +1061,109 @@
       setState({ viewingItem: null });
     };
 
-    window.downloadPNG = function(id) {
-      const cvs = document.getElementById('qr-canvas-' + id);
-      if (cvs) {
-        const link = document.createElement('a');
-        link.download = `qr-code-${id}.png`;
-        link.href = cvs.toDataURL('image/png');
-        link.click();
+    window.toggleDownloadMenu = function(id) {
+      const menu = document.getElementById('dl-menu-' + id);
+      if (!menu) return;
+      const isOpen = menu.style.display === 'block';
+      document.querySelectorAll('[id^="dl-menu-"]').forEach(m => m.style.display = 'none');
+      menu.style.display = isOpen ? 'none' : 'block';
+      if (!isOpen) {
+        const closeHandler = (e) => {
+          const wrap = document.getElementById('dl-wrap-' + id);
+          if (wrap && !wrap.contains(e.target)) { menu.style.display = 'none'; document.removeEventListener('click', closeHandler); }
+        };
+        setTimeout(() => document.addEventListener('click', closeHandler), 10);
       }
+    };
+
+    window.downloadPNG = function(id, cm) {
+      const item = state.codes.find(c => c.id === id);
+      if (!item) return;
+
+      const DPI = 300;
+      let physicalPx, labelStr;
+      if (!cm || cm === 0) {
+        physicalPx = 1000;
+        labelStr = '1000px-digital';
+      } else {
+        physicalPx = Math.round(DPI * (cm / 2.54));
+        labelStr = cm.toString().replace('.', '_') + 'cm-300dpi';
+      }
+      const quietZone = Math.round(physicalPx * 0.1);
+      const qrInnerSize = physicalPx - quietZone * 2;
+
+      const fgColor = (item.design && item.design.fgColor) ? item.design.fgColor : '#000000';
+      const bgColor = (item.design && item.design.bgColor) ? item.design.bgColor : '#ffffff';
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + qrInnerSize + 'px;height:' + qrInnerSize + 'px;';
+      document.body.appendChild(tempDiv);
+
+      const payloadObj = {
+        i: item.id, t: item.title, y: item.type,
+        c: JSON.parse(JSON.stringify(item.content)), d: item.design
+      };
+      if (payloadObj.c && payloadObj.c.headerImage && payloadObj.c.headerImage.startsWith('data:image')) {
+        payloadObj.c.headerImage = '';
+      }
+      let textPayload;
+      try {
+        textPayload = window.location.origin + window.location.pathname + '#p=' + btoa(unescape(encodeURIComponent(JSON.stringify(payloadObj))));
+      } catch(e) {
+        textPayload = window.location.origin + window.location.pathname + '#view=' + item.id;
+      }
+
+      new QRCode(tempDiv, {
+        text: textPayload,
+        width: qrInnerSize,
+        height: qrInnerSize,
+        colorDark: fgColor,
+        colorLight: bgColor,
+        correctLevel: QRCode.CorrectLevel.L
+      });
+
+      setTimeout(function() {
+        const printCanvas = document.createElement('canvas');
+        printCanvas.width = physicalPx;
+        printCanvas.height = physicalPx;
+        const ctx = printCanvas.getContext('2d');
+        ctx.fillStyle = bgColor;
+        ctx.fillRect(0, 0, physicalPx, physicalPx);
+
+        const srcCanvas = tempDiv.querySelector('canvas');
+        const srcImg = tempDiv.querySelector('img');
+
+        const drawAndSave = () => {
+          if (srcCanvas) {
+            ctx.drawImage(srcCanvas, quietZone, quietZone, qrInnerSize, qrInnerSize);
+          }
+          document.body.removeChild(tempDiv);
+
+          // Download
+          const safeName = (item.title || 'qr-code').replace(/[^a-zA-Z0-9\u0370-\u03ff\u1f00-\u1fff\u0386\u0388-\u038a\u038c\u038e-\u03a1\u03a3-\u03ce_ -]/gi, '').trim().replace(/\s+/g, '-').toLowerCase();
+          const link = document.createElement('a');
+          link.download = `qr-${safeName || id}-2.5cm-300dpi.png`;
+          link.href = printCanvas.toDataURL('image/png');
+          link.click();
+
+          // Show success toast
+          const toast = document.createElement('div');
+          toast.textContent = '✅ QR Code αποθηκεύτηκε! (2.5×2.5cm @ 300 DPI)';
+          toast.style.cssText = 'position:fixed;bottom:2rem;left:50%;transform:translateX(-50%);background:#1e293b;border:1px solid #34d399;color:#34d399;padding:0.75rem 1.5rem;border-radius:12px;font-weight:600;font-size:0.85rem;z-index:99999;box-shadow:0 8px 24px rgba(0,0,0,0.5);';
+          document.body.appendChild(toast);
+          setTimeout(() => toast.remove(), 3000);
+        };
+
+        if (srcCanvas) {
+          drawAndSave();
+        } else if (srcImg) {
+          const img = new Image();
+          img.onload = () => { ctx.drawImage(img, quietZone, quietZone, qrInnerSize, qrInnerSize); drawAndSave(); };
+          img.src = srcImg.src;
+        } else {
+          document.body.removeChild(tempDiv);
+        }
+      }, 200);
     };
 
     // Builder Inputs Handlers (Smooth updates without focus loss)
