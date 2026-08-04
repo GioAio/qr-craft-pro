@@ -253,6 +253,8 @@
       }
     ];
 
+    const SETTINGS_KEY = 'qr_craft_pro_settings_v1';
+
     function getStoredData() {
       try {
         const d = localStorage.getItem(STORAGE_KEY);
@@ -266,21 +268,37 @@
       }
     }
 
+    function getStoredSettings() {
+      try {
+        const s = localStorage.getItem(SETTINGS_KEY);
+        if (!s) return { ghToken: '', ghOwner: '', ghRepo: '' };
+        return JSON.parse(s);
+      } catch (e) {
+        return { ghToken: '', ghOwner: '', ghRepo: '' };
+      }
+    }
+
     function saveData(data) {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    }
+
+    function saveSettingsData(settings) {
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(settings));
     }
 
     // State Store
     let state = {
       codes: getStoredData(),
-      view: 'dashboard', // 'dashboard' | 'builder'
+      settings: getStoredSettings(),
+      view: 'dashboard', // 'dashboard' | 'builder' | 'settings'
       editingItem: null,
       viewingItem: null
     };
 
     function setState(newState) {
       state = { ...state, ...newState };
-      saveData(state.codes);
+      if (newState.codes) saveData(state.codes);
+      if (newState.settings) saveSettingsData(state.settings);
       renderApp();
     }
 
@@ -559,9 +577,14 @@
             <!-- List Header -->
             <div class="glass-panel" style="padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
               <h2 style="font-size: 1.25rem; font-weight: 700; color: #fff;">Τα QR Codes Μου (${state.codes.length})</h2>
-              <button onclick="openNewBuilder()" class="btn-primary">
-                + Δημιουργία QR Code
-              </button>
+              <div style="display:flex; gap:0.5rem;">
+                <button onclick="openSettingsModal()" class="btn-secondary" style="font-size: 0.9rem; padding: 0.55rem 1rem;">
+                  ⚙️ Ρυθμίσεις (GitHub Sync)
+                </button>
+                <button onclick="openNewBuilder()" class="btn-primary">
+                  + Δημιουργία QR Code
+                </button>
+              </div>
             </div>
 
             <!-- QR Cards Grid -->
@@ -1198,22 +1221,48 @@
 
       const html = '<!DOCTYPE html>\n<html lang="el">\n<head>\n<meta charset="UTF-8">\n<meta name="viewport" content="width=device-width,initial-scale=1.0">\n<title>' + (item.title||'') + '</title>\n<meta name="description" content="' + (c.description||item.title||'') + '">\n<style>\n*{box-sizing:border-box;margin:0;padding:0;}\nbody{background:#f1f5f9;display:flex;justify-content:center;min-height:100vh;font-family:' + font + ';}\n.page{width:100%;max-width:480px;min-height:100vh;background:' + pageBg + ';box-shadow:0 0 40px rgba(0,0,0,0.15);}\n.links{padding:0 1rem 2rem;}\n.footer{text-align:center;padding:1.5rem;font-size:0.75rem;color:#94a3b8;}\n.footer a{color:' + btnColor + ';text-decoration:none;font-weight:600;}\n</style>\n</head>\n<body>\n<div class="page">\n' + headerHTML + '\n<div style="padding:1rem 1rem 0.5rem;text-align:center;">\n<h1 style="font-size:' + titleFontSize + ';font-weight:800;color:' + titleColor + ';">' + (c.title||item.title||'') + '</h1>\n' + (c.description ? '<p style="font-size:0.82rem;color:#475569;margin-top:0.4rem;line-height:1.5;">' + c.description + '</p>' : '') + '\n</div>\n<div class="links" style="margin-top:1rem;">' + linksHTML + '</div>\n<div class="footer">Powered by <a href="#" target="_blank">QR Craft Pro</a></div>\n</div>\n</body>\n</html>';
 
-      const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
-      const dlUrl = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = dlUrl;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(dlUrl);
+      const { ghToken, ghOwner, ghRepo } = state.settings || {};
+      const canAutoSync = ghToken && ghOwner && ghRepo;
+
+      if (!canAutoSync) {
+        // Classic Manual Download
+        const blob = new Blob([html], { type: 'text/html;charset=utf-8' });
+        const dlUrl = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = dlUrl;
+        a.download = filename;
+        a.click();
+        URL.revokeObjectURL(dlUrl);
+      }
 
       // Instructions + QR generator modal
       const modal = document.createElement('div');
       modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;';
       modal.id = 'export-modal-' + item.id;
-      modal.innerHTML = `
-        <div style="background:#0f172a;border:1px solid #1e40af;border-radius:20px;padding:2rem;max-width:500px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.7);margin:auto;">
-          <button onclick="document.getElementById('export-modal-${item.id}').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>
-
+      
+      let modalContent = '';
+      if (canAutoSync) {
+        // Auto-Sync UI
+        modalContent = `
+          <div style="text-align:center;margin-bottom:1.5rem;">
+            <div style="font-size:2.5rem;margin-bottom:0.5rem;">⚡</div>
+            <h2 style="color:#fff;font-size:1.3rem;font-weight:800;">GitHub Auto-Sync Ενεργό!</h2>
+            <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">Το αρχείο <strong style="color:#38bdf8;">${filename}</strong> θα ανέβει αυτόματα στο <strong>${ghOwner}/${ghRepo}</strong>.</p>
+          </div>
+          
+          <button id="btn-sync-${item.id}" onclick="syncToGitHub('${item.id}', '${filename}', \`${html.replace(/`/g, '\\`')}\`)" class="btn-primary" style="width:100%;font-size:1.1rem;padding:1rem;justify-content:center;margin-bottom:1rem;background:linear-gradient(135deg,#10b981,#059669);">
+            🚀 Συγχρονισμός & Δημιουργία QR
+          </button>
+          
+          <div id="sync-loading-${item.id}" style="display:none; text-align:center; color:#38bdf8; font-weight:700; margin-bottom:1rem;">
+            Συγχρονισμός στο GitHub... ⏳
+          </div>
+          
+          <input type="hidden" id="gh-base-url-${item.id}" value="https://${ghOwner}.github.io/${ghRepo}/" />
+        `;
+      } else {
+        // Classic Manual UI
+        modalContent = `
           <div style="text-align:center;margin-bottom:1.5rem;">
             <div style="font-size:2rem;margin-bottom:0.3rem;">🚀</div>
             <h2 style="color:#fff;font-size:1.1rem;font-weight:800;">Αρχείο Έτοιμο! Τώρα φτιάξε το QR Code</h2>
@@ -1240,6 +1289,14 @@
             />
             <p style="font-size:0.68rem;color:#64748b;">Βρες το URL στο GitHub → Settings → Pages</p>
           </div>
+        `;
+      }
+
+      modal.innerHTML = `
+        <div style="background:#0f172a;border:1px solid #1e40af;border-radius:20px;padding:2rem;max-width:500px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.7);margin:auto;">
+          <button onclick="document.getElementById('export-modal-${item.id}').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>
+          
+          ${modalContent}
 
           <!-- QR Preview area -->
           <div id="export-qr-area-${item.id}" style="display:none;text-align:center;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:12px;padding:1.25rem;">
@@ -1264,7 +1321,120 @@
         </div>
       `;
       document.body.appendChild(modal);
+    };
 
+    window.openSettingsModal = function() {
+      const existing = document.getElementById('settings-modal');
+      if (existing) existing.remove();
+
+      const { ghToken, ghOwner, ghRepo } = state.settings;
+
+      const modal = document.createElement('div');
+      modal.id = 'settings-modal';
+      modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(9,13,22,0.85);backdrop-filter:blur(8px);display:flex;align-items:center;justify-content:center;z-index:9999;padding:1rem;overflow-y:auto;';
+      
+      modal.innerHTML = `
+        <div style="background:rgba(15,23,42,0.95);border:1px solid var(--border-color);border-radius:16px;padding:2rem;max-width:550px;width:100%;box-shadow:0 25px 50px -12px rgba(0,0,0,0.5); position:relative;">
+          <button onclick="document.getElementById('settings-modal').remove()" style="position:absolute;top:1rem;right:1rem;background:transparent;border:none;color:var(--text-muted);font-size:1.5rem;cursor:pointer;">&times;</button>
+          
+          <h2 style="font-size:1.5rem;font-weight:700;color:#fff;margin-bottom:0.5rem;display:flex;align-items:center;gap:0.5rem;">
+            ⚙️ Ρυθμίσεις (GitHub Sync)
+          </h2>
+          <p style="font-size:0.85rem;color:var(--text-muted);margin-bottom:1.5rem;">
+            Ρύθμισε τον λογαριασμό σου στο GitHub για να ανεβαίνουν τα αρχεία <b>αυτόματα</b> στο background χωρίς να κάνεις καμία λήψη! 🚀
+          </p>
+
+          <div style="background:rgba(56,189,248,0.05);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:1rem;margin-bottom:1.5rem;">
+            <h4 style="font-size:0.9rem;color:#38bdf8;margin-bottom:0.5rem;">Οδηγίες Δημιουργίας Token:</h4>
+            <ol style="font-size:0.8rem;color:#e2e8f0;margin:0;padding-left:1.2rem;line-height:1.5;">
+              <li>Μπες στο <b>GitHub.com</b> και πήγαινε στα <b>Settings</b> > <b>Developer settings</b> > <b>Personal access tokens</b> > <b>Tokens (classic)</b>.</li>
+              <li>Πάτα <b>Generate new token (classic)</b>.</li>
+              <li>Βάλε ένα όνομα (π.χ. "QR Studio"), βάλε Expiration "No expiration" και τσέκαρε το κουτάκι <b>repo</b>.</li>
+              <li>Πάτα Generate και <b>αντέγραψε το κωδικό</b> που ξεκινάει με \`ghp_\`.</li>
+            </ol>
+            <p style="font-size:0.75rem;color:var(--text-muted);margin-top:0.75rem;margin-bottom:0;">🔒 <i>Το token αποθηκεύεται <b>μόνο</b> στον υπολογιστή σου. Δεν αποστέλλεται πουθενά αλλού!</i></p>
+          </div>
+
+          <div style="margin-bottom:1rem;">
+            <label style="display:block;font-size:0.85rem;color:var(--text-main);margin-bottom:0.4rem;font-weight:600;">GitHub Token (ghp_...)</label>
+            <input id="set-token" type="password" value="${ghToken || ''}" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" style="width:100%;background:rgba(9,13,22,0.8);border:1px solid var(--border-color);border-radius:8px;padding:0.7rem;color:#fff;font-size:0.9rem;" />
+          </div>
+
+          <div style="display:flex;gap:1rem;margin-bottom:1.5rem;">
+            <div style="flex:1;">
+              <label style="display:block;font-size:0.85rem;color:var(--text-main);margin-bottom:0.4rem;font-weight:600;">GitHub Username</label>
+              <input id="set-owner" type="text" value="${ghOwner || ''}" placeholder="π.χ. GioAio" style="width:100%;background:rgba(9,13,22,0.8);border:1px solid var(--border-color);border-radius:8px;padding:0.7rem;color:#fff;font-size:0.9rem;" />
+            </div>
+            <div style="flex:1;">
+              <label style="display:block;font-size:0.85rem;color:var(--text-main);margin-bottom:0.4rem;font-weight:600;">Repository Name</label>
+              <input id="set-repo" type="text" value="${ghRepo || ''}" placeholder="π.χ. qr-craft-pro" style="width:100%;background:rgba(9,13,22,0.8);border:1px solid var(--border-color);border-radius:8px;padding:0.7rem;color:#fff;font-size:0.9rem;" />
+            </div>
+          </div>
+
+          <button onclick="saveSettingsFromModal()" class="btn-primary" style="width:100%;font-size:1rem;padding:0.8rem;justify-content:center;">
+            💾 Αποθήκευση Ρυθμίσεων
+          </button>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    };
+
+    window.saveSettingsFromModal = function() {
+      const token = document.getElementById('set-token').value.trim();
+      const owner = document.getElementById('set-owner').value.trim();
+      const repo = document.getElementById('set-repo').value.trim();
+      
+      setState({ settings: { ghToken: token, ghOwner: owner, ghRepo: repo } });
+      document.getElementById('settings-modal').remove();
+      alert('Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς! Το Auto-Sync ενεργοποιήθηκε. ✅');
+    };
+
+    window.syncToGitHub = async function(itemId, filename, htmlContent) {
+      const { ghToken, ghOwner, ghRepo } = state.settings;
+      if (!ghToken || !ghOwner || !ghRepo) return;
+
+      const btn = document.getElementById('btn-sync-' + itemId);
+      const loading = document.getElementById('sync-loading-' + itemId);
+      const qrArea = document.getElementById('export-qr-area-' + itemId);
+      
+      if (btn) btn.style.display = 'none';
+      if (loading) loading.style.display = 'block';
+
+      const url = `https://api.github.com/repos/${ghOwner}/${ghRepo}/contents/${filename}`;
+      
+      try {
+        // 1. Get SHA if file exists (needed for updates)
+        let sha = null;
+        const getRes = await fetch(url, { headers: { 'Authorization': `Bearer ${ghToken}` } });
+        if (getRes.ok) {
+          const data = await getRes.json();
+          sha = data.sha;
+        }
+        
+        // 2. Put file
+        const contentEncoded = btoa(unescape(encodeURIComponent(htmlContent)));
+        const body = { message: `Auto-sync ${filename} via QR Craft Pro`, content: contentEncoded };
+        if (sha) body.sha = sha;
+        
+        const putRes = await fetch(url, {
+          method: 'PUT',
+          headers: { 'Authorization': `Bearer ${ghToken}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+        
+        if (!putRes.ok) {
+          const err = await putRes.json();
+          throw new Error(err.message || 'Αποτυχία ανεβάσματος στο GitHub.');
+        }
+        
+        if (loading) loading.style.display = 'none';
+        if (qrArea) qrArea.style.display = 'block';
+
+      } catch(e) {
+        if (loading) loading.style.display = 'none';
+        if (btn) btn.style.display = 'block';
+        alert('❌ Σφάλμα Auto-Sync: ' + e.message);
+      }
     };
 
     window.toggleDownloadMenu = function(id) {
