@@ -1248,10 +1248,18 @@
               <canvas id="export-qr-canvas-${item.id}" style="display:block;"></canvas>
             </div>
             <br>
-            <button onclick="downloadExportQR('${item.id}', '${filename}')"
-              style="background:linear-gradient(135deg,#34d399,#059669);border:none;color:#fff;padding:0.65rem 1.5rem;border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;">
-              📥 Κατέβασε το QR Code (PNG)
-            </button>
+            <div style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
+              <select id="export-format-${item.id}" style="background:#0f172a; border:1px solid #10b981; color:#fff; padding:0.55rem; border-radius:8px; font-size:0.8rem; cursor:pointer;">
+                <option value="svg" selected>✨ SVG (Τέλειο για εκτύπωση)</option>
+                <option value="png-2.0">PNG (2 x 2 cm)</option>
+                <option value="png-2.5">PNG (2.5 x 2.5 cm)</option>
+                <option value="png-4.0">PNG (4 x 4 cm)</option>
+              </select>
+              <button onclick="downloadExportQR('${item.id}', '${filename}')"
+                style="background:linear-gradient(135deg,#34d399,#059669);border:none;color:#fff;padding:0.65rem 1rem;border-radius:8px;font-weight:700;font-size:0.85rem;cursor:pointer;">
+                📥 Λήψη
+              </button>
+            </div>
           </div>
         </div>
       `;
@@ -1328,49 +1336,86 @@
     };
 
     window.downloadExportQR = function(itemId, filename) {
-      const cvs = document.getElementById('export-qr-canvas-' + itemId);
-      if (!cvs) return;
-
-      // Build print-ready 295px version (2.5cm @ 300dpi)
-      const SIZE = 295;
-      const QZ   = 20;
-      const QR   = SIZE - QZ * 2;
-
-      const tempDiv = document.createElement('div');
-      tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + QR + 'px;height:' + QR + 'px;';
-      document.body.appendChild(tempDiv);
-
       const input = document.getElementById('gh-base-url-' + itemId);
-      let base = (input && input.value.trim()) || '';
+      const formatSel = document.getElementById('export-format-' + itemId);
+      if (!input || !formatSel) return;
+      
+      let base = input.value.trim();
       if (!base.endsWith('/')) base += '/';
       const fullUrl = base + filename;
+      const safeName = filename.replace('.html', '').replace(/[^a-z0-9-]/gi, '-');
+      const format = formatSel.value;
 
-      new QRCode(tempDiv, {
-        text: fullUrl, width: QR, height: QR,
-        colorDark: '#000000', colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.M
-      });
+      if (format === 'svg') {
+        const rawDiv = document.createElement('div');
+        const qr = new QRCode(rawDiv, {
+          text: fullUrl, width: 256, height: 256,
+          colorDark: '#000000', colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
 
-      setTimeout(function() {
-        const printCanvas = document.createElement('canvas');
-        printCanvas.width = SIZE; printCanvas.height = SIZE;
-        const ctx = printCanvas.getContext('2d');
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(0, 0, SIZE, SIZE);
-
-        const src = tempDiv.querySelector('canvas') || tempDiv.querySelector('img');
-        const draw = () => {
-          document.body.removeChild(tempDiv);
-          const safeName = filename.replace('.html','').replace(/[^a-z0-9-]/gi,'-');
+        setTimeout(() => {
+          const canvas = rawDiv.querySelector('canvas');
+          if (!canvas) return;
+          const ctx = canvas.getContext('2d');
+          const size = canvas.width;
+          const imgData = ctx.getImageData(0, 0, size, size);
+          let path = '';
+          for (let y = 0; y < size; y++) {
+            for (let x = 0; x < size; x++) {
+              const i = (y * size + x) * 4;
+              if (imgData.data[i] < 128) { // Dark pixel
+                path += `M${x},${y}h1v1h-1z `;
+              }
+            }
+          }
+          const qz = 16;
+          const totalSize = size + qz * 2;
+          const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${totalSize} ${totalSize}" shape-rendering="crispEdges"><rect width="100%" height="100%" fill="#ffffff"/><path d="${path}" fill="#000000" transform="translate(${qz},${qz})"/></svg>`;
+          
+          const blob = new Blob([svg], { type: 'image/svg+xml;charset=utf-8' });
           const a = document.createElement('a');
-          a.download = 'qr-' + safeName + '-2.5cm.png';
-          a.href = printCanvas.toDataURL('image/png');
+          a.href = URL.createObjectURL(blob);
+          a.download = `qr-${safeName}.svg`;
           a.click();
-        };
-        if (!src) { document.body.removeChild(tempDiv); return; }
-        if (src.tagName === 'CANVAS') { ctx.drawImage(src, QZ, QZ, QR, QR); draw(); }
-        else { const img = new Image(); img.onload = () => { ctx.drawImage(img, QZ, QZ, QR, QR); draw(); }; img.src = src.src; }
-      }, 300);
+        }, 300);
+      } else {
+        const cm = parseFloat(format.replace('png-', ''));
+        const DPI = 300;
+        const physicalPx = Math.round(DPI * (cm / 2.54));
+        const qz = Math.round(physicalPx * 0.1);
+        const qrSize = physicalPx - (qz * 2);
+
+        const tempDiv = document.createElement('div');
+        tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + qrSize + 'px;height:' + qrSize + 'px;';
+        document.body.appendChild(tempDiv);
+
+        new QRCode(tempDiv, {
+          text: fullUrl, width: qrSize, height: qrSize,
+          colorDark: '#000000', colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+
+        setTimeout(() => {
+          const printCanvas = document.createElement('canvas');
+          printCanvas.width = physicalPx; printCanvas.height = physicalPx;
+          const ctx = printCanvas.getContext('2d');
+          ctx.fillStyle = '#ffffff';
+          ctx.fillRect(0, 0, physicalPx, physicalPx);
+
+          const src = tempDiv.querySelector('canvas') || tempDiv.querySelector('img');
+          const draw = () => {
+            document.body.removeChild(tempDiv);
+            const a = document.createElement('a');
+            a.download = `qr-${safeName}-${cm}cm.png`;
+            a.href = printCanvas.toDataURL('image/png');
+            a.click();
+          };
+          if (!src) { document.body.removeChild(tempDiv); return; }
+          if (src.tagName === 'CANVAS') { ctx.drawImage(src, qz, qz, qrSize, qrSize); draw(); }
+          else { const img = new Image(); img.onload = () => { ctx.drawImage(img, qz, qz, qrSize, qrSize); draw(); }; img.src = src.src; }
+        }, 300);
+      }
     };
 
     window.downloadPNG = function(id, cm) {
