@@ -302,9 +302,14 @@
         i: item.id,
         t: item.title,
         y: item.type,
-        c: item.content,
+        c: JSON.parse(JSON.stringify(item.content)),
         d: item.design
       };
+      
+      // CRITICAL: Strip local base64 images to prevent massive QR codes
+      if (payloadObj.c && payloadObj.c.headerImage && payloadObj.c.headerImage.startsWith('data:image')) {
+        payloadObj.c.headerImage = '';
+      }
       
       let textPayload;
       try {
@@ -334,7 +339,7 @@
               height: qrSize,
               colorDark: fgColor,
               colorLight: bgColor,
-              correctLevel: QRCode.CorrectLevel.M
+              correctLevel: QRCode.CorrectLevel.L // Force low error correction to keep QR simple and scannable
             });
 
             // qrcodejs may render async — wait a tick then copy
