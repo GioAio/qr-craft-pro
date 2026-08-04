@@ -296,7 +296,24 @@
       const baseUrl = window.location.protocol === 'file:'
         ? window.location.href.split('#')[0]
         : (window.location.origin + window.location.pathname);
-      const textPayload = baseUrl + '#view=' + item.id;
+        
+      // Minify data to fit in QR Code without database
+      const payloadObj = {
+        i: item.id,
+        t: item.title,
+        y: item.type,
+        c: item.content,
+        d: item.design
+      };
+      
+      let textPayload;
+      try {
+        // Encode to Base64 (supports Greek/utf8)
+        const base64Str = btoa(unescape(encodeURIComponent(JSON.stringify(payloadObj))));
+        textPayload = baseUrl + '#p=' + base64Str;
+      } catch (e) {
+        textPayload = baseUrl + '#view=' + item.id;
+      }
 
       const fgColor = (item.design && item.design.fgColor) ? item.design.fgColor : '#000000';
       const bgColor = (item.design && item.design.bgColor) ? item.design.bgColor : '#ffffff';
@@ -380,13 +397,33 @@
 
       // ── PUBLIC LANDING PAGE MODE ──
       const hash = window.location.hash;
+      
+      // Fallback for old local #view links
       if (hash.startsWith('#view=')) {
         const id = hash.replace('#view=', '');
         const item = state.codes.find(c => c.id === id);
         if (item) {
-          // Track scan (in a real app this would call an API)
           appEl.innerHTML = renderLandingPageHTML(item, false);
           return; // Stop rendering the dashboard
+        }
+      } 
+      // Serverless Payload Link Mode (Reads data directly from URL)
+      else if (hash.startsWith('#p=')) {
+        try {
+          const b64 = hash.replace('#p=', '');
+          const decodedStr = decodeURIComponent(escape(atob(b64)));
+          const parsed = JSON.parse(decodedStr);
+          const item = {
+            id: parsed.i,
+            title: parsed.t,
+            type: parsed.y,
+            content: parsed.c,
+            design: parsed.d
+          };
+          appEl.innerHTML = renderLandingPageHTML(item, false);
+          return; // Stop rendering the dashboard
+        } catch(e) {
+          console.error("Failed to parse QR payload", e);
         }
       }
 
@@ -527,16 +564,10 @@
                   </div>
 
                   <div>
-                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.5rem;">Εικόνα Κεφαλίδας (Cover)</label>
-                    <div style="display:flex;gap:0.5rem;align-items:center;flex-wrap:wrap;margin-bottom:0.5rem;">
-                      <label class="btn-secondary" style="font-size:0.8rem;cursor:pointer;padding:0.45rem 0.85rem;">
-                        📁 Επιλογή από υπολογιστή
-                        <input type="file" accept="image/*" onchange="handleCoverFileUpload(this)" style="display:none;" />
-                      </label>
-                      ${ml.headerImage ? `<button onclick="removeCoverImage()" class="btn-secondary" style="font-size:0.78rem;padding:0.45rem 0.65rem;border-color:rgba(239,68,68,0.4);color:#ef4444;">🗑️ Αφαίρεση</button>` : ''}
-                    </div>
-                    <input type="text" id="input-cover" value="${ml.headerImage || ''}" oninput="updateBuilderCover(this.value)" placeholder="Ή επικολλήστε URL εικόνας..." style="${inp}" />
+                    <label style="font-size:0.8rem;font-weight:600;color:var(--text-muted);display:block;margin-bottom:0.5rem;">Εικόνα Κεφαλίδας (Cover Image URL)</label>
+                    <input type="text" id="input-cover" value="${ml.headerImage || ''}" oninput="updateBuilderCover(this.value)" placeholder="Επικολλήστε link εικόνας (π.χ. https://...)" style="${inp}" />
                     ${ml.headerImage ? `<img src="${ml.headerImage}" style="width:100%;max-height:100px;object-fit:cover;border-radius:8px;margin-top:0.5rem;" onerror="this.style.display='none'" />` : ''}
+                    <p style="font-size:0.65rem;color:var(--text-muted);margin-top:0.3rem;">* Η εικόνα πρέπει να είναι Link. Αν ανεβάζαμε αρχεία από το PC, το QR Code θα γινόταν πολύ μεγάλο και δεν θα μπορούσε να σκαναριστεί.</p>
                   </div>
 
                   <!-- Links Manager -->
