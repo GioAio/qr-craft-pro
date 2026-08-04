@@ -284,38 +284,100 @@
       renderApp();
     }
 
+    // ── SHARED: Ultra-compact payload builder ──────────────────────────────
+    // Keeps QR data under 500 chars by stripping defaults + using 1-char keys
+    function buildCompactPayload(item) {
+      const c = item.content || {};
+      const d = item.design || {};
+      const links = (c.links || []).map(l => {
+        const lk = {};
+        if (l.label)      lk.a = l.label;
+        if (l.url)        lk.b = l.url;
+        if (l.highlight)  lk.c = 1;
+        if (l.badge)      lk.d = l.badge;
+        if (l.subtext)    lk.e = l.subtext;
+        if (l.extraNotes) lk.f = l.extraNotes;
+        return lk;
+      });
+      const p = {};
+      p.t = item.title || '';
+      if (c.title && c.title !== item.title) p.ct = c.title;
+      if (c.description) p.cd = c.description;
+      if (c.headerImage && !c.headerImage.startsWith('data:')) p.ci = c.headerImage;
+      if (c.theme && c.theme !== 'emerald') p.cm = c.theme;
+      if (links.length)  p.cl = links;
+      if (d.titleColor)  p.dc = d.titleColor;
+      if (d.buttonColor) p.db = d.buttonColor;
+      if (d.pageBgColor) p.dg = d.pageBgColor;
+      if (d.fontFamily)  p.df = d.fontFamily;
+      if (d.titleSize && d.titleSize !== 'md')      p.ds = d.titleSize;
+      if (d.btnRadius && d.btnRadius !== '10px')     p.dr = d.btnRadius;
+      if (d.headerStyle && d.headerStyle !== 'gradient') p.dh = d.headerStyle;
+      if (d.fgColor && d.fgColor !== '#1e293b')     p.dq = d.fgColor;
+      if (d.bgColor && d.bgColor !== '#ffffff')      p.dw = d.bgColor;
+      return p;
+    }
+
     // Draw QR Code onto canvas using qrcodejs library
     function renderQRCode(canvas, item, size) {
       if (!canvas) return;
       size = size || 110;
-      const scale = 4; // Generate at 4x resolution for crispness
+      const scale = 4;
       const renderSize = size * scale;
-      const margin = 16 * scale; // Quiet zone (margin)
+      const margin = 16 * scale;
       const qrSize = renderSize - (margin * 2);
 
       const baseUrl = window.location.protocol === 'file:'
         ? window.location.href.split('#')[0]
         : (window.location.origin + window.location.pathname);
-        
-      // Minify data to fit in QR Code without database
-      const payloadObj = {
-        i: item.id,
-        t: item.title,
-        y: item.type,
-        c: JSON.parse(JSON.stringify(item.content)),
-        d: item.design
-      };
-      
-      // CRITICAL: Strip local base64 images to prevent massive QR codes
-      if (payloadObj.c && payloadObj.c.headerImage && payloadObj.c.headerImage.startsWith('data:image')) {
-        payloadObj.c.headerImage = '';
+
+      // ── ULTRA-COMPACT PAYLOAD ──────────────────────────────────────────
+      // Goal: keep QR data under 500 chars for clean/scannable QR codes
+      // Strategy: strip defaults, use 1-char keys, omit nulls/empties
+      function buildCompactPayload(item) {
+        const c = item.content || {};
+        const d = item.design || {};
+
+        // Ultra-short link keys: a=label, b=url, c=highlight, d=badge, e=subtext
+        const links = (c.links || []).map(l => {
+          const lk = {};
+          if (l.label)     lk.a = l.label;
+          if (l.url)       lk.b = l.url;
+          if (l.highlight) lk.c = 1;        // bool → 0/1
+          if (l.badge)     lk.d = l.badge;
+          if (l.subtext)   lk.e = l.subtext;
+          if (l.extraNotes) lk.f = l.extraNotes;
+          return lk;
+        });
+
+        const p = {};
+        p.t = item.title || '';
+        // content
+        if (c.title)       p.ct = c.title;
+        if (c.description) p.cd = c.description;
+        // Only include non-base64 header image
+        if (c.headerImage && !c.headerImage.startsWith('data:')) p.ci = c.headerImage;
+        if (c.theme && c.theme !== 'emerald') p.cm = c.theme;
+        if (links.length)  p.cl = links;
+        // design — only non-default values
+        if (d.titleColor)  p.dc = d.titleColor;
+        if (d.buttonColor) p.db = d.buttonColor;
+        if (d.pageBgColor) p.dg = d.pageBgColor;
+        if (d.fontFamily)  p.df = d.fontFamily;
+        if (d.titleSize && d.titleSize !== 'md') p.ds = d.titleSize;
+        if (d.btnRadius && d.btnRadius !== '10px') p.dr = d.btnRadius;
+        if (d.headerStyle && d.headerStyle !== 'gradient') p.dh = d.headerStyle;
+        if (d.fgColor && d.fgColor !== '#1e293b') p.dq = d.fgColor;
+        if (d.bgColor && d.bgColor !== '#ffffff') p.dw = d.bgColor;
+        return p;
       }
-      
+
       let textPayload;
       try {
-        // Encode to Base64 (supports Greek/utf8)
-        const base64Str = btoa(unescape(encodeURIComponent(JSON.stringify(payloadObj))));
-        textPayload = baseUrl + '#p=' + base64Str;
+        const compact = buildCompactPayload(item);
+        const json = JSON.stringify(compact);
+        const b64 = btoa(unescape(encodeURIComponent(json)));
+        textPayload = baseUrl + '#p=' + b64;
       } catch (e) {
         textPayload = baseUrl + '#view=' + item.id;
       }
@@ -417,13 +479,40 @@
         try {
           const b64 = hash.replace('#p=', '');
           const decodedStr = decodeURIComponent(escape(atob(b64)));
-          const parsed = JSON.parse(decodedStr);
+          const p = JSON.parse(decodedStr);
+
+          // Expand compact payload back to full item structure
+          // Short keys: ct=content.title, cd=description, ci=headerImage, cm=theme,
+          //   cl=links (a=label,b=url,c=highlight,d=badge,e=subtext,f=extraNotes)
+          //   dc=titleColor, db=buttonColor, dg=pageBgColor, df=fontFamily,
+          //   ds=titleSize, dr=btnRadius, dh=headerStyle, dq=fgColor, dw=bgColor
+          const links = (p.cl || []).map(l => ({
+            label: l.a || '', url: l.b || '', highlight: !!l.c,
+            badge: l.d || '', subtext: l.e || '', extraNotes: l.f || ''
+          }));
+
           const item = {
-            id: parsed.i,
-            title: parsed.t,
-            type: parsed.y,
-            content: parsed.c,
-            design: parsed.d
+            id: 'scanned',
+            title: p.t || '',
+            type: 'multilink',
+            content: {
+              title: p.ct || p.t || '',
+              description: p.cd || '',
+              headerImage: p.ci || '',
+              theme: p.cm || 'emerald',
+              links
+            },
+            design: {
+              titleColor:  p.dc || null,
+              buttonColor: p.db || null,
+              pageBgColor: p.dg || null,
+              fontFamily:  p.df || null,
+              titleSize:   p.ds || 'md',
+              btnRadius:   p.dr || '10px',
+              headerStyle: p.dh || 'gradient',
+              fgColor:     p.dq || '#1e293b',
+              bgColor:     p.dw || '#ffffff'
+            }
           };
           appEl.innerHTML = renderLandingPageHTML(item, false);
           return; // Stop rendering the dashboard
@@ -1099,16 +1188,11 @@
       tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + qrInnerSize + 'px;height:' + qrInnerSize + 'px;';
       document.body.appendChild(tempDiv);
 
-      const payloadObj = {
-        i: item.id, t: item.title, y: item.type,
-        c: JSON.parse(JSON.stringify(item.content)), d: item.design
-      };
-      if (payloadObj.c && payloadObj.c.headerImage && payloadObj.c.headerImage.startsWith('data:image')) {
-        payloadObj.c.headerImage = '';
-      }
+      // Use shared compact builder (same as renderQRCode)
       let textPayload;
       try {
-        textPayload = window.location.origin + window.location.pathname + '#p=' + btoa(unescape(encodeURIComponent(JSON.stringify(payloadObj))));
+        const b64 = btoa(unescape(encodeURIComponent(JSON.stringify(buildCompactPayload(item)))));
+        textPayload = window.location.origin + window.location.pathname + '#p=' + b64;
       } catch(e) {
         textPayload = window.location.origin + window.location.pathname + '#view=' + item.id;
       }
