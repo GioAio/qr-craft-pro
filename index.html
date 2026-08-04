@@ -1206,28 +1206,57 @@
       a.click();
       URL.revokeObjectURL(dlUrl);
 
-      // Instructions modal
+      // Instructions + QR generator modal
       const modal = document.createElement('div');
-      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;';
-      modal.innerHTML = '<div style="background:#0f172a;border:1px solid #1e40af;border-radius:20px;padding:2rem;max-width:480px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.7);">'
-        + '<button onclick="this.closest(\'[style*=fixed]\').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>'
-        + '<div style="text-align:center;margin-bottom:1.5rem;"><div style="font-size:2.5rem;margin-bottom:0.5rem;">🚀</div>'
-        + '<h2 style="color:#fff;font-size:1.2rem;font-weight:800;">Αρχείο Κατεβήκε!</h2>'
-        + '<p style="color:#94a3b8;font-size:0.82rem;margin-top:0.3rem;">Αποθηκεύτηκε: <strong style="color:#38bdf8;">' + filename + '</strong></p></div>'
-        + '<div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:1.2rem;margin-bottom:1rem;">'
-        + '<p style="font-size:0.8rem;font-weight:700;color:#38bdf8;margin-bottom:0.75rem;">📋 ΒΗΜΑΤΑ ΑΝΕΒΑΣΜΑΤΟΣ:</p>'
-        + '<ol style="color:#cbd5e1;font-size:0.8rem;line-height:2.2;padding-left:1.2rem;">'
-        + '<li>Μπες στο GitHub repository σου</li>'
-        + '<li>Πάτα <strong>Add file → Upload files</strong></li>'
-        + '<li>Ανέβασε το <strong>' + filename + '</strong></li>'
-        + '<li>Πάτα <strong>Commit changes</strong></li></ol></div>'
-        + '<div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:12px;padding:1rem;">'
-        + '<p style="font-size:0.75rem;font-weight:700;color:#34d399;margin-bottom:0.4rem;">⚡ ΑΠΟΤΕΛΕΣΜΑ:</p>'
-        + '<p style="font-size:0.72rem;color:#94a3b8;">Το QR Code θα δείχνει σε:</p>'
-        + '<p style="font-size:0.72rem;color:#38bdf8;word-break:break-all;margin-top:0.2rem;">https://[username].github.io/[repo]/' + filename + '</p>'
-        + '<p style="font-size:0.7rem;color:#34d399;margin-top:0.5rem;font-weight:600;">✅ QR Version 3 — ~60 χαρ. — Σκανάρεται ακόμα και σε 2×2cm!</p>'
-        + '</div></div>';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);z-index:99999;display:flex;align-items:center;justify-content:center;padding:1rem;overflow-y:auto;';
+      modal.id = 'export-modal-' + item.id;
+      modal.innerHTML = `
+        <div style="background:#0f172a;border:1px solid #1e40af;border-radius:20px;padding:2rem;max-width:500px;width:100%;position:relative;box-shadow:0 20px 60px rgba(0,0,0,0.7);margin:auto;">
+          <button onclick="document.getElementById('export-modal-${item.id}').remove()" style="position:absolute;top:12px;right:12px;background:rgba(255,255,255,0.1);border:none;color:#fff;width:32px;height:32px;border-radius:50%;cursor:pointer;font-size:1rem;">✕</button>
+
+          <div style="text-align:center;margin-bottom:1.5rem;">
+            <div style="font-size:2rem;margin-bottom:0.3rem;">🚀</div>
+            <h2 style="color:#fff;font-size:1.1rem;font-weight:800;">Αρχείο Έτοιμο! Τώρα φτιάξε το QR Code</h2>
+            <p style="color:#94a3b8;font-size:0.78rem;margin-top:0.3rem;">Κατέβηκε: <strong style="color:#38bdf8;">${filename}</strong></p>
+          </div>
+
+          <!-- Step 1: Upload instructions -->
+          <div style="background:rgba(56,189,248,0.08);border:1px solid rgba(56,189,248,0.2);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+            <p style="font-size:0.78rem;font-weight:700;color:#38bdf8;margin-bottom:0.5rem;">Βήμα 1 — Ανέβασε το αρχείο στο GitHub:</p>
+            <ol style="color:#cbd5e1;font-size:0.78rem;line-height:2;padding-left:1.1rem;">
+              <li>GitHub repo → <strong>Add file → Upload files</strong></li>
+              <li>Ανέβασε το <strong>${filename}</strong></li>
+              <li>Πάτα <strong>Commit changes</strong></li>
+            </ol>
+          </div>
+
+          <!-- Step 2: Enter URL and generate QR -->
+          <div style="background:rgba(124,58,237,0.08);border:1px solid rgba(124,58,237,0.3);border-radius:12px;padding:1rem;margin-bottom:1rem;">
+            <p style="font-size:0.78rem;font-weight:700;color:#c084fc;margin-bottom:0.6rem;">Βήμα 2 — Βάλε το GitHub URL σου και δημιούργησε QR:</p>
+            <input id="gh-base-url-${item.id}" type="text"
+              placeholder="π.χ. https://georgeuser.github.io/qr-pro-studio/"
+              style="width:100%;background:rgba(15,23,42,0.8);border:1px solid rgba(124,58,237,0.4);border-radius:8px;padding:0.6rem 0.75rem;color:#fff;font-size:0.8rem;margin-bottom:0.6rem;"
+              oninput="generateExportQR('${item.id}', '${filename}')"
+            />
+            <p style="font-size:0.68rem;color:#64748b;">Βρες το URL στο GitHub → Settings → Pages</p>
+          </div>
+
+          <!-- QR Preview area -->
+          <div id="export-qr-area-${item.id}" style="display:none;text-align:center;background:rgba(16,185,129,0.06);border:1px solid rgba(16,185,129,0.25);border-radius:12px;padding:1.25rem;">
+            <p style="font-size:0.72rem;font-weight:700;color:#34d399;margin-bottom:0.75rem;">✅ QR ΈΤΟΙΜΟ — Σκανάρεται ακόμα και σε 2×2cm!</p>
+            <div style="background:#fff;display:inline-block;padding:8px;border-radius:10px;margin-bottom:0.75rem;">
+              <canvas id="export-qr-canvas-${item.id}" style="display:block;"></canvas>
+            </div>
+            <br>
+            <button onclick="downloadExportQR('${item.id}', '${filename}')"
+              style="background:linear-gradient(135deg,#34d399,#059669);border:none;color:#fff;padding:0.65rem 1.5rem;border-radius:10px;font-weight:700;font-size:0.85rem;cursor:pointer;">
+              📥 Κατέβασε το QR Code (PNG)
+            </button>
+          </div>
+        </div>
+      `;
       document.body.appendChild(modal);
+
     };
 
     window.toggleDownloadMenu = function(id) {
@@ -1243,6 +1272,105 @@
         };
         setTimeout(() => document.addEventListener('click', closeHandler), 10);
       }
+    };
+
+    window.generateExportQR = function(itemId, filename) {
+      const input = document.getElementById('gh-base-url-' + itemId);
+      const area  = document.getElementById('export-qr-area-' + itemId);
+      const cvs   = document.getElementById('export-qr-canvas-' + itemId);
+      if (!input || !area || !cvs) return;
+
+      let base = input.value.trim();
+      if (!base) { area.style.display = 'none'; return; }
+      if (!base.endsWith('/')) base += '/';
+      const fullUrl = base + filename;
+
+      // Clear old QR
+      while (cvs.nextSibling && cvs.nextSibling.tagName === 'DIV') cvs.nextSibling.remove();
+      const parent = cvs.parentNode;
+      parent.removeChild(cvs);
+      const newCvs = document.createElement('canvas');
+      newCvs.id = 'export-qr-canvas-' + itemId;
+      newCvs.style.display = 'block';
+      parent.insertBefore(newCvs, parent.firstChild);
+
+      const size = 200;
+      const tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + size + 'px;height:' + size + 'px;';
+      document.body.appendChild(tempDiv);
+
+      new QRCode(tempDiv, {
+        text: fullUrl,
+        width: size,
+        height: size,
+        colorDark: '#000000',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      setTimeout(function() {
+        const src = tempDiv.querySelector('canvas') || tempDiv.querySelector('img');
+        if (src) {
+          newCvs.width = size;
+          newCvs.height = size;
+          const ctx = newCvs.getContext('2d');
+          if (src.tagName === 'CANVAS') {
+            ctx.drawImage(src, 0, 0, size, size);
+          } else {
+            const img = new Image();
+            img.onload = () => ctx.drawImage(img, 0, 0, size, size);
+            img.src = src.src;
+          }
+        }
+        document.body.removeChild(tempDiv);
+        area.style.display = 'block';
+      }, 300);
+    };
+
+    window.downloadExportQR = function(itemId, filename) {
+      const cvs = document.getElementById('export-qr-canvas-' + itemId);
+      if (!cvs) return;
+
+      // Build print-ready 295px version (2.5cm @ 300dpi)
+      const SIZE = 295;
+      const QZ   = 20;
+      const QR   = SIZE - QZ * 2;
+
+      const tempDiv = document.createElement('div');
+      tempDiv.style.cssText = 'position:fixed;left:-9999px;top:-9999px;width:' + QR + 'px;height:' + QR + 'px;';
+      document.body.appendChild(tempDiv);
+
+      const input = document.getElementById('gh-base-url-' + itemId);
+      let base = (input && input.value.trim()) || '';
+      if (!base.endsWith('/')) base += '/';
+      const fullUrl = base + filename;
+
+      new QRCode(tempDiv, {
+        text: fullUrl, width: QR, height: QR,
+        colorDark: '#000000', colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.M
+      });
+
+      setTimeout(function() {
+        const printCanvas = document.createElement('canvas');
+        printCanvas.width = SIZE; printCanvas.height = SIZE;
+        const ctx = printCanvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, SIZE, SIZE);
+
+        const src = tempDiv.querySelector('canvas') || tempDiv.querySelector('img');
+        const draw = () => {
+          document.body.removeChild(tempDiv);
+          const safeName = filename.replace('.html','').replace(/[^a-z0-9-]/gi,'-');
+          const a = document.createElement('a');
+          a.download = 'qr-' + safeName + '-2.5cm.png';
+          a.href = printCanvas.toDataURL('image/png');
+          a.click();
+        };
+        if (!src) { document.body.removeChild(tempDiv); return; }
+        if (src.tagName === 'CANVAS') { ctx.drawImage(src, QZ, QZ, QR, QR); draw(); }
+        else { const img = new Image(); img.onload = () => { ctx.drawImage(img, QZ, QZ, QR, QR); draw(); }; img.src = src.src; }
+      }, 300);
     };
 
     window.downloadPNG = function(id, cm) {
