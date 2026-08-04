@@ -1290,6 +1290,16 @@
 
       let base = input.value.trim();
       if (!base) { area.style.display = 'none'; return; }
+      
+      // Auto-correct github.com to github.io
+      if (base.includes('github.com')) {
+        const parts = base.replace('https://', '').replace('http://', '').split('/');
+        if (parts.length >= 3) {
+          base = `https://${parts[1]}.github.io/${parts[2]}/`;
+          input.value = base; // update UI
+        }
+      }
+      
       if (!base.endsWith('/')) base += '/';
       const fullUrl = base + filename;
 
@@ -1341,6 +1351,14 @@
       if (!input || !formatSel) return;
       
       let base = input.value.trim();
+      // Auto-correct github.com to github.io
+      if (base.includes('github.com')) {
+        const parts = base.replace('https://', '').replace('http://', '').split('/');
+        if (parts.length >= 3) {
+          base = `https://${parts[1]}.github.io/${parts[2]}/`;
+        }
+      }
+
       if (!base.endsWith('/')) base += '/';
       const fullUrl = base + filename;
       const safeName = filename.replace('.html', '').replace(/[^a-z0-9-]/gi, '-');
