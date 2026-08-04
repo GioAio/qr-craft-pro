@@ -1250,7 +1250,9 @@
             <p style="color:#94a3b8;font-size:0.85rem;margin-top:0.5rem;">Το αρχείο <strong style="color:#38bdf8;">${filename}</strong> θα ανέβει αυτόματα στο <strong>${ghOwner}/${ghRepo}</strong>.</p>
           </div>
           
-          <button id="btn-sync-${item.id}" onclick="syncToGitHub('${item.id}', '${filename}', \`${html.replace(/`/g, '\\`')}\`)" class="btn-primary" style="width:100%;font-size:1.1rem;padding:1rem;justify-content:center;margin-bottom:1rem;background:linear-gradient(135deg,#10b981,#059669);">
+          <textarea id="gh-sync-html-${item.id}" style="display:none;"></textarea>
+          
+          <button id="btn-sync-${item.id}" onclick="syncToGitHub('${item.id}', '${filename}')" class="btn-primary" style="width:100%;font-size:1.1rem;padding:1rem;justify-content:center;margin-bottom:1rem;background:linear-gradient(135deg,#10b981,#059669);">
             🚀 Συγχρονισμός & Δημιουργία QR
           </button>
           
@@ -1321,6 +1323,16 @@
         </div>
       `;
       document.body.appendChild(modal);
+      
+      // Populate the hidden textarea with the raw HTML
+      if (canAutoSync) {
+        document.getElementById('gh-sync-html-' + item.id).value = html;
+      }
+      
+      // Auto-generate QR immediately if AutoSync is enabled
+      if (canAutoSync) {
+        setTimeout(() => generateExportQR(item.id, filename), 100);
+      }
     };
 
     window.openSettingsModal = function() {
@@ -1389,13 +1401,14 @@
       alert('Οι ρυθμίσεις αποθηκεύτηκαν επιτυχώς! Το Auto-Sync ενεργοποιήθηκε. ✅');
     };
 
-    window.syncToGitHub = async function(itemId, filename, htmlContent) {
+    window.syncToGitHub = async function(itemId, filename) {
       const { ghToken, ghOwner, ghRepo } = state.settings;
       if (!ghToken || !ghOwner || !ghRepo) return;
 
       const btn = document.getElementById('btn-sync-' + itemId);
       const loading = document.getElementById('sync-loading-' + itemId);
       const qrArea = document.getElementById('export-qr-area-' + itemId);
+      const htmlContent = document.getElementById('gh-sync-html-' + itemId).value;
       
       if (btn) btn.style.display = 'none';
       if (loading) loading.style.display = 'block';
