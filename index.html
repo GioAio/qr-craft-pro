@@ -378,6 +378,18 @@
       const appEl = document.getElementById('app');
       if (!appEl) return;
 
+      // ── PUBLIC LANDING PAGE MODE ──
+      const hash = window.location.hash;
+      if (hash.startsWith('#view=')) {
+        const id = hash.replace('#view=', '');
+        const item = state.codes.find(c => c.id === id);
+        if (item) {
+          // Track scan (in a real app this would call an API)
+          appEl.innerHTML = renderLandingPageHTML(item, false);
+          return; // Stop rendering the dashboard
+        }
+      }
+
       const totalScans = state.codes.reduce((acc, c) => acc + (c.scanCount || 0), 0);
 
       let contentHTML = '';
@@ -807,13 +819,12 @@
       }
     }
 
-    // Phone Mockup HTML Generator — uses item.design for real-time colour/font preview
-    function renderPhoneMockupHTML(item) {
+    // ── PUBLIC & MOCKUP RENDERER ──
+    function renderLandingPageHTML(item, isMockup = false) {
       const isMulti = item.type === 'multilink';
       const c = isMulti ? item.content : null;
       const d = item.design || {};
 
-      // Resolve design values (custom overrides theme defaults)
       const titleSizeMap = { sm: '0.95rem', md: '1.1rem', lg: '1.35rem', xl: '1.6rem' };
       const titleFontSize = titleSizeMap[d.titleSize] || '1.15rem';
       const font = d.fontFamily ? `'${d.fontFamily}', sans-serif` : 'inherit';
@@ -825,7 +836,6 @@
                        : 'linear-gradient(180deg,#ecfdf5 0%,#f0fdf4 100%)';
       const screenBg   = d.pageBgColor || defaultBg;
 
-      // Header: if custom image exists use it, else use header style
       const headerStyle = d.headerStyle || 'gradient';
       let headerHTML = '';
       if (c && c.headerImage) {
@@ -833,7 +843,6 @@
       } else if (headerStyle === 'minimal') {
         headerHTML = `<div style="height:16px;"></div>`;
       } else {
-        // gradient banner
         const bannerGrad = c && c.theme === 'luxury' ? 'linear-gradient(135deg,#7e22ce,#a855f7)'
                          : c && c.theme === 'sunset' ? 'linear-gradient(135deg,#ea580c,#fb923c)'
                          : 'linear-gradient(135deg,#047857,#34d399)';
@@ -842,6 +851,79 @@
         </div>`;
       }
 
+      // If not mockup, it fills the screen (mobile view)
+      const containerStyle = isMockup ? `background:${screenBg};font-family:${font};height:100%;` : `min-height:100vh;max-width:480px;margin:0 auto;background:${screenBg};font-family:${font};box-shadow:0 0 20px rgba(0,0,0,0.5);`;
+
+      return `
+        <div style="${containerStyle}">
+          ${isMulti && c ? `
+            <div>
+              ${headerHTML}
+
+              <div style="padding: 0.85rem 0.75rem; text-align: center;">
+                <h3 style="font-size:${titleFontSize}; font-weight: 800; color: ${titleColor}; margin:0;">
+                  ${c.title || 'Τίτλος'}
+                </h3>
+                ${c.description ? `
+                  <p style="font-size: 0.75rem; color: #475569; margin-top: 0.35rem; line-height:1.4;">
+                    ${c.description}
+                  </p>
+                ` : ''}
+              </div>
+
+              <div style="padding: 0 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
+                ${c.links && c.links.length > 0 ? c.links.map(link => `
+                  <a href="${link.url}" target="_blank" style="text-decoration:none;">
+                    <div style="
+                      background: ${link.highlight ? btnColor : '#ffffff'};
+                      color: ${link.highlight ? '#ffffff' : '#1e293b'};
+                      border: ${link.highlight ? 'none' : '1.5px solid #e2e8f0'};
+                      border-radius: ${btnRadius};
+                      padding: 0.65rem 0.85rem;
+                      display: flex;
+                      align-items: center;
+                      justify-content: space-between;
+                      box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+                      font-family: ${font};
+                    ">
+                      <div style="text-align: left;">
+                        <strong style="font-size: 0.8rem; display: block;">${link.label || 'Σύνδεσμος'}</strong>
+                        ${link.subtext ? `<span style="font-size: 0.67rem; opacity: 0.8; display: block;">${link.subtext}</span>` : ''}
+                        ${link.extraNotes ? `<span style="font-size: 0.63rem; font-weight: 600; opacity: 0.85; margin-top: 0.15rem; display: block;">${link.extraNotes.startsWith('*') ? link.extraNotes : '* ' + link.extraNotes}</span>` : ''}
+                      </div>
+                      ${link.badge ? `
+                        <span style="font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 6px; white-space:nowrap; margin-left:0.4rem;
+                          background: ${link.highlight ? 'rgba(255,255,255,0.25)' : btnColor + '22'};
+                          color: ${link.highlight ? '#fff' : btnColor};">
+                          ${link.badge}
+                        </span>
+                      ` : ''}
+                    </div>
+                  </a>
+                `).join('') : `
+                  <div style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 2rem 0;">
+                    Δεν έχουν προστεθεί σύνδεσμοι.
+                  </div>
+                `}
+              </div>
+            </div>
+          ` : `
+            <div style="padding: 2rem 1rem; text-align: center;">
+              <h3 style="font-size: 1.1rem; color: ${titleColor}; font-family:${font};">${item.title}</h3>
+              <p style="font-size: 0.8rem; color: #64748b;">${item.type.toUpperCase()} QR CODE</p>
+            </div>
+          `}
+          ${!isMockup ? `
+            <div style="text-align:center;padding:2rem 1rem;font-size:0.75rem;color:#64748b;font-weight:600;">
+              Powered by <a href="#" onclick="window.location.hash=''; window.location.reload(); return false;" style="color:${btnColor};text-decoration:none;">QR Craft Pro</a>
+            </div>
+          ` : ''}
+        </div>
+      `;
+    }
+
+    // Phone Mockup HTML Generator (Wraps landing page in phone UI)
+    function renderPhoneMockupHTML(item) {
       return `
         <div style="text-align: center;">
           <span style="font-size: 0.72rem; font-weight: 700; color: var(--text-muted); letter-spacing: 0.05em;">
@@ -849,62 +931,8 @@
           </span>
           <div class="phone-mockup-wrapper" style="margin-top: 0.5rem;">
             <div class="phone-notch"></div>
-            <div class="phone-screen" style="background:${screenBg};font-family:${font};">
-              ${isMulti && c ? `
-                <div>
-                  ${headerHTML}
-
-                  <div style="padding: 0.85rem 0.75rem; text-align: center;">
-                    <h3 style="font-size:${titleFontSize}; font-weight: 800; color: ${titleColor}; margin:0;">
-                      ${c.title || 'Τίτλος'}
-                    </h3>
-                    ${c.description ? `
-                      <p style="font-size: 0.75rem; color: #475569; margin-top: 0.35rem; line-height:1.4;">
-                        ${c.description}
-                      </p>
-                    ` : ''}
-                  </div>
-
-                  <div style="padding: 0 0.75rem 1rem; display: flex; flex-direction: column; gap: 0.5rem;">
-                    ${c.links && c.links.length > 0 ? c.links.map(link => `
-                      <div style="
-                        background: ${link.highlight ? btnColor : '#ffffff'};
-                        color: ${link.highlight ? '#ffffff' : '#1e293b'};
-                        border: ${link.highlight ? 'none' : '1.5px solid #e2e8f0'};
-                        border-radius: ${btnRadius};
-                        padding: 0.65rem 0.85rem;
-                        display: flex;
-                        align-items: center;
-                        justify-content: space-between;
-                        box-shadow: 0 2px 8px rgba(0,0,0,0.07);
-                        font-family: ${font};
-                      ">
-                        <div style="text-align: left;">
-                          <strong style="font-size: 0.8rem; display: block;">${link.label || 'Σύνδεσμος'}</strong>
-                          ${link.subtext ? `<span style="font-size: 0.67rem; opacity: 0.8; display: block;">${link.subtext}</span>` : ''}
-                          ${link.extraNotes ? `<span style="font-size: 0.63rem; font-weight: 600; opacity: 0.85; margin-top: 0.15rem; display: block;">${link.extraNotes.startsWith('*') ? link.extraNotes : '* ' + link.extraNotes}</span>` : ''}
-                        </div>
-                        ${link.badge ? `
-                          <span style="font-size: 0.6rem; font-weight: 700; padding: 0.15rem 0.4rem; border-radius: 6px; white-space:nowrap; margin-left:0.4rem;
-                            background: ${link.highlight ? 'rgba(255,255,255,0.25)' : btnColor + '22'};
-                            color: ${link.highlight ? '#fff' : btnColor};">
-                            ${link.badge}
-                          </span>
-                        ` : ''}
-                      </div>
-                    `).join('') : `
-                      <div style="text-align: center; color: #94a3b8; font-size: 0.8rem; padding: 2rem 0;">
-                        Δεν έχουν προστεθεί σύνδεσμοι.
-                      </div>
-                    `}
-                  </div>
-                </div>
-              ` : `
-                <div style="padding: 2rem 1rem; text-align: center;">
-                  <h3 style="font-size: 1.1rem; color: ${titleColor}; font-family:${font};">${item.title}</h3>
-                  <p style="font-size: 0.8rem; color: #64748b;">${item.type.toUpperCase()} QR CODE</p>
-                </div>
-              `}
+            <div class="phone-screen" style="padding:0; overflow-y:auto; overflow-x:hidden;">
+              ${renderLandingPageHTML(item, true)}
             </div>
           </div>
         </div>
